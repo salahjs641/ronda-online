@@ -14,7 +14,7 @@
 
 const { createDeck, shuffle, deal } = require('./deck');
 
-const CARDS_PER_DEAL = 4;
+const CARDS_PER_DEAL = 3;
 const TABLE_CARDS_INITIAL = 4;
 const RANK_ORDER = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
 
