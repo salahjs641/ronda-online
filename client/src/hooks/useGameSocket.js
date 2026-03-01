@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-const socket = io();
+const socket = io('https://ronda-online-production.up.railway.app', {
+    transports: ['websocket', 'polling']
+});
 
 export function useGameSocket() {
     const [gameState, setGameState] = useState(null);
