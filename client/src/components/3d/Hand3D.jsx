@@ -12,11 +12,11 @@ export default function Hand3D({ cards, isMyTurn, onPlayCard }) {
     // Camera is at (0, 2.6, 3.5)
     // COORDINATES are relative to Camera (nested in PerspectiveCamera)
     return (
-        <group position={[0, -0.6, -2.5]} rotation={[0.2, 0, 0]}>
+        <group position={[0, -1.2, -3.0]} rotation={[0.1, 0, 0]}>
             {cards.map((card, i) => {
                 const t = total === 1 ? 0 : (i / (total - 1)) * 2 - 1;
                 const x = t * totalWidth * 0.5;
-                const y = -Math.abs(t) * 0.03;
+                const y = -Math.abs(t) * 0.05;
                 const z = i * 0.012;
                 const rotZ = -t * 0.04;
 
@@ -28,7 +28,7 @@ export default function Hand3D({ cards, isMyTurn, onPlayCard }) {
                         rotation={[0, 0, rotZ]}
                         isPlayable={isMyTurn}
                         onClick={() => onPlayCard(card.code)}
-                        scale={1.3} // Made cards larger so they are clearly visible
+                        scale={0.9} // Scaled down and moved lower so they don't block the table
                     />
                 );
             })}
