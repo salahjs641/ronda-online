@@ -433,7 +433,7 @@ function endRound(gs) {
         }
     }
 
-    // Card-count scoring
+    // Card-count scoring (For every card above 20, +1 Bant)
     let teamACaptured = 0;
     let teamBCaptured = 0;
     for (const p of gs.players) {
@@ -446,8 +446,19 @@ function endRound(gs) {
     } else if (teamBCaptured > 20) {
         gs.teamB.bant += (teamBCaptured - 20);
     }
-    gs.cardCount = { teamA: teamACaptured, teamB: teamBCaptured };
-    gs.state = 'round_ended';
+
+    // Check if anyone won at the end of the round scoring
+    const totalHbalA = gs.teamA.hbal + Math.floor(gs.teamA.bant / 6);
+    const totalHbalB = gs.teamB.hbal + Math.floor(gs.teamB.bant / 6);
+
+    if (totalHbalA >= 8 || totalHbalB >= 8) {
+        gs.winner = totalHbalA >= 8 ? 'A' : 'B';
+        gs.state = 'ended';
+        return;
+    }
+
+    // Automatically continue game with a fresh deck!
+    startNewRound(gs);
 }
 
 function dealNewHands(gs) {
