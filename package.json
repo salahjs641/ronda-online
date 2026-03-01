@@ -1,0 +1,20 @@
+{
+  "name": "ronda-online",
+  "version": "1.0.0",
+  "description": "Moroccan Ronda 2v2 Online Card Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "npm install --prefix client && npm run build --prefix client"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jimp": "^0.16.1",
+    "localtunnel": "^2.0.2",
+    "mongoose": "^8.10.1",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  }
+}

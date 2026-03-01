@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description"
+    content="Ronda Online — Play the classic Moroccan card game with friends in an immersive 3D café experience." />
+  <meta name="theme-color" content="#070a09" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Ronda Online — Moroccan Card Game</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    /* Prevent flash of white during load */
+    html,
+    body,
+    #root {
+      margin: 0;
+      padding: 0;
+      background: #070a09;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Loading screen */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #070a09;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.6s;
+    }
+
+    #loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loading-screen h1 {
+      font-family: Georgia, serif;
+      font-size: 36px;
+      color: #c9a84c;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+
+    #loading-screen p {
+      font-family: sans-serif;
+      font-size: 12px;
+      color: #555;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    .loader-bar {
+      width: 160px;
+      height: 2px;
+      background: rgba(201, 168, 76, 0.15);
+      border-radius: 2px;
+      margin-top: 24px;
+      overflow: hidden;
+    }
+
+    .loader-bar::after {
+      content: '';
+      display: block;
+      width: 60%;
+      height: 100%;
+      background: #c9a84c;
+      border-radius: 2px;
+      animation: load-sweep 1.5s ease-in-out infinite;
+    }
+
+    @keyframes load-sweep {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(260%);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading-screen">
+    <h1>🃏 RONDA</h1>
+    <p>Moroccan Card Game</p>
+    <div class="loader-bar"></div>
+  </div>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+  <script>
+    // Hide loading screen once React mounts
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const ls = document.getElementById('loading-screen');
+        if (ls) {
+          ls.classList.add('fade-out');
+          setTimeout(() => ls.remove(), 600);
+        }
+      }, 800);
+    });
+  </script>
+</body>
+
+</html>
