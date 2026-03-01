@@ -12,12 +12,12 @@ export default function Hand3D({ cards, isMyTurn, onPlayCard }) {
     // Camera is at (0, 2.6, 3.5)
     // COORDINATES are relative to Camera (nested in PerspectiveCamera)
     return (
-        <group position={[0, -1.2, -3.0]} rotation={[0.1, 0, 0]}>
+        <group position={[0, -0.9, -2.6]} rotation={[0.15, 0, 0]}>
             {cards.map((card, i) => {
                 const t = total === 1 ? 0 : (i / (total - 1)) * 2 - 1;
                 const x = t * totalWidth * 0.45;
-                const y = -Math.abs(t) * 0.05 - 0.15; // Shifted an additional -0.15 units down relative to camera
-                const z = i * 0.012 - 0.2; // Push it very slightly forward to stay within camera clipping
+                const y = -Math.abs(t) * 0.05;
+                const z = i * 0.012;
                 const rotZ = -t * 0.04;
 
                 return (
