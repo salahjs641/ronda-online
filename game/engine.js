@@ -250,120 +250,119 @@ function playCard(gs, seatNumber, cardCode) {
     const card = player.hand.splice(cardIndex, 1)[0];
 
     const result = {
-        success: true,
-        card,
+        success: true, card,
         playedBy: { seat: player.seat, username: player.username, team: player.team },
-        captured: [],
-        bantEarned: false,
-        hbalEarned: false,
-        events: [],
-        tableCleared: false,
+        captured: [], bantEarned: 0, hbalEarned: 0, events: [], tableCleared: false,
     };
 
-    // Find rank match
+    // 1. Direct match capture + ascending sequence
     const matchIndex = gs.tableCards.findIndex(c => c.value === card.value);
+
+    // Track sequential match chain (Bant -> Hbal -> 2 Hbal)
+    if (!gs.captureChain) {
+        gs.captureChain = { active: false, value: null, count: 0 };
+    }
 
     if (matchIndex !== -1) {
         const matchedCard = gs.tableCards[matchIndex];
+
+        // Immediate Capture Chain Logic (Moroccan Special Rule)
+        if (gs.captureChain.active && gs.captureChain.value === card.value && gs.lastPlayedBySeat !== player.seat) {
+            gs.captureChain.count++;
+            if (gs.captureChain.count === 2) {
+                // Second immediate capture = 1 Bant
+                getTeamData(gs, player.team).bant += 1;
+                result.bantEarned += 1;
+                result.events.push({ type: 'BANT', description: `${player.username} hit the first capture chain! (1 Bant)` });
+            } else if (gs.captureChain.count === 3) {
+                // Third immediate capture = 1 Hbal
+                getTeamData(gs, player.team).hbal += 1;
+                result.hbalEarned += 1;
+                result.events.push({ type: 'HBAL', description: `${player.username} kept the chain going! (1 Hbal)` });
+            } else if (gs.captureChain.count === 4) {
+                // Fourth immediate capture = 2 Hbal
+                getTeamData(gs, player.team).hbal += 2;
+                result.hbalEarned += 2;
+                result.events.push({ type: 'HBAL', description: `${player.username} finished the chain! (2 Hbal)` });
+            }
+        } else {
+            // Check if this initiates a new chain (hitting the card just dropped by opponent)
+            if (gs.lastPlayedCard && gs.lastPlayedCard.value === card.value && gs.lastPlayedBySeat !== player.seat) {
+                gs.captureChain = { active: true, value: card.value, count: 2 };
+                getTeamData(gs, player.team).bant += 1;
+                result.bantEarned += 1;
+                result.events.push({ type: 'BANT', description: `${player.username} hit the card! (1 Bant)` });
+            } else {
+                // Normal capture, reset chain
+                gs.captureChain = { active: false, value: null, count: 0 };
+            }
+        }
+
+        // Gather sequence captures
         const remainingCards = gs.tableCards.filter((_, i) => i !== matchIndex);
         const seqIndices = findAscendingSequence(card.value, remainingCards);
+        const capturedCards = [matchedCard, ...seqIndices.map(i => remainingCards[i])];
 
-        const capturedCards = [matchedCard];
-        const seqCards = seqIndices.map(i => remainingCards[i]);
-        capturedCards.push(...seqCards);
-
-        // Este/Caída
-        let esteCard = null;
-        if (gs.lastPlayedCard && gs.lastPlayedBySeat !== null) {
-            if (matchedCard.value === gs.lastPlayedCard.value &&
-                matchedCard.playedBySeat === gs.lastPlayedBySeat) {
-                esteCard = matchedCard;
-                if (matchedCard.playedByTeam !== player.team) {
-                    getTeamData(gs, player.team).bant++;
-                    result.bantEarned = true;
-                    result.events.push({ type: 'BANT', reason: 'este', description: `Este! ${player.username} captured the last played card` });
-                }
-            }
-        }
-
-        // Score each captured card
-        for (const cap of capturedCards) {
-            if (cap === esteCard) continue;
-            if (cap.playedBySeat !== null) {
-                if (cap.playedByTeam !== player.team) {
-                    getTeamData(gs, player.team).bant++;
-                    result.bantEarned = true;
-                    result.events.push({ type: 'BANT', reason: 'opponent_capture', description: `${player.username} captured opponent's card` });
-                } else if (cap.playedBySeat !== player.seat) {
-                    getTeamData(gs, player.team).hbal++;
-                    result.hbalEarned = true;
-                    result.events.push({ type: 'HBAL', reason: 'teammate_capture', description: `${player.username} captured teammate's card` });
-                }
-            }
-        }
-
-        // Remove captured from table
         const capturedCodes = new Set(capturedCards.map(c => c.code));
         gs.tableCards = gs.tableCards.filter(c => !capturedCodes.has(c.code));
 
-        player.capturedCards.push(card, ...capturedCards.map(c => ({
-            suit: c.suit, value: c.value, code: c.code
-        })));
+        player.capturedCards.push(card, ...capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })));
         result.captured = capturedCards;
         gs.lastCapturer = player.seat;
 
-        // Missa
+        // Table cleared (Missa) -> 1 Bant
         if (gs.tableCards.length === 0) {
-            getTeamData(gs, player.team).bant++;
-            result.bantEarned = true;
+            getTeamData(gs, player.team).bant += 1;
+            result.bantEarned += 1;
             result.tableCleared = true;
-            result.events.push({ type: 'BANT', reason: 'missa', description: `Missa! ${player.username} cleared the table` });
+            result.events.push({ type: 'BANT', description: `Missa! ${player.username} cleared the table (1 Bant)` });
         }
 
-        // Fourth card rule
-        checkFourthCard(gs, player, result);
-
     } else {
-        // No match → card stays on table
-        gs.tableCards.push({
-            ...card,
-            playedBySeat: player.seat,
-            playedByTeam: player.team
-        });
+        // Did not match -> Drop card on table, break chain
+        gs.captureChain = { active: false, value: null, count: 0 };
+        gs.tableCards.push({ ...card, playedBySeat: player.seat, playedByTeam: player.team });
     }
 
-    // Track last played for Este
+    // Keep track of last played card
     gs.lastPlayedCard = card;
     gs.lastPlayedBySeat = player.seat;
 
-    // Store last action for UI
+    // Check Win Condition (8 Hbal)
+    const teamObj = getTeamData(gs, player.team);
+    const convertedHbal = Math.floor(teamObj.bant / 6);
+    const totalHbal = teamObj.hbal + convertedHbal;
+
+    if (totalHbal >= 8) {
+        gs.winner = player.team;
+        gs.state = 'ended';
+        result.events.push({ type: 'WIN', description: `Team ${player.team} reached 8 Hbal and WINS!` });
+    }
+
     gs.lastAction = {
-        seat: player.seat,
-        username: player.username,
+        seat: player.seat, username: player.username,
         card: { suit: card.suit, value: card.value, code: card.code },
         captured: result.captured.length,
         events: result.events.map(e => e.description).filter(Boolean),
     };
 
-    // Advance turn
+    if (gs.state === 'ended') return result;
+
     advanceTurn(gs);
 
-    // Check if all hands empty
-    const allEmpty = gs.players.every(p => p.hand.length === 0);
-    if (allEmpty) {
+    if (gs.players.every(p => p.hand.length === 0)) {
         if (gs.deck.length > 0) {
-            // Re-deal 4 cards to each
             dealNewHands(gs);
             gs.dealNumber++;
             gs.lastPlayedCard = null;
             gs.lastPlayedBySeat = null;
+            gs.captureChain = { active: false, value: null, count: 0 };
             result.events.push({ type: 'NEW_DEAL', description: 'New cards dealt!' });
         } else {
             endRound(gs);
             result.events.push({ type: 'ROUND_END', description: 'Round over!' });
         }
     }
-
     return result;
 }
 
