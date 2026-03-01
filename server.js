@@ -10,7 +10,13 @@ const { setupSocketHandlers } = require('./sockets/socketHandler');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: '*' }
+    cors: {
+        origin: '*',
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    allowEIO3: true, // Help with older client fallback
+    pingTimeout: 60000,
 });
 
 // Serve static files — card images & other assets
