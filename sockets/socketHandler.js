@@ -171,8 +171,12 @@ function setupSocketHandlers(io) {
             const result = engine.playCard(gs, info.seat, cardCode);
             if (!result.success) return callback(result);
 
-            // Broadcast events (Bant, Hbal, etc.)
+            console.log(`🃏 Play: seat=${info.seat} card=${cardCode} captured=${result.captured.length} events=${result.events.length}`);
+
+            // Broadcast capture events to ALL clients for animation
             if (result.captured.length > 0 || result.events.length > 0) {
+                console.log(`📡 Emitting game-events: captured=${result.captured.map(c => c.code).join(',')}`);
+
                 io.to(info.roomCode).emit('game-events', {
                     player: result.playedBy.username,
                     card: result.card,

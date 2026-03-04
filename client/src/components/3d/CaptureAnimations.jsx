@@ -37,8 +37,17 @@ export default function CaptureAnimations({ lastEvent, oppPositions, seatLayout 
     const [animations, setAnimations] = useState([]);
 
     useEffect(() => {
+        if (lastEvent) {
+            console.log('🎬 CaptureAnimations received lastEvent:', {
+                seat: lastEvent.seat,
+                card: lastEvent.card?.code,
+                capturedCount: lastEvent.captured?.length,
+                eventsCount: lastEvent.events?.length
+            });
+        }
         if (lastEvent && lastEvent.captured && lastEvent.captured.length > 0) {
             const allCards = [lastEvent.card, ...lastEvent.captured];
+            console.log('🎬 Creating capture animation with', allCards.length, 'cards');
 
             // Default to 'me' (bottom of screen)
             let targetPos = [0, -1, 3];
