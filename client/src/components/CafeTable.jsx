@@ -48,7 +48,7 @@ const CafeTable = ({
   const canClaimKbir = !myTeamData.dfu3Kbir && myTeamData.hbal >= 4 && myTeamData.bant >= 2;
   const canClaimSghir = myTeamData.dfu3Kbir && !myTeamData.dfu3Sghir && myTeamData.hbal >= 3 && myTeamData.bant >= 4;
 
-  const isMyTurn = gameState.currentPlayerSeat === mySeat && gameState.state === 'active' && gameState.phase === 'active';
+  const isMyTurn = gameState.currentPlayerSeat === mySeat && gameState.state === 'active' && (gameState.phase === 'active' || gameState.phase === 'chain_window');
 
   return (
     <div className="game-viewport">

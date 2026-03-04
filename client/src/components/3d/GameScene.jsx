@@ -21,7 +21,7 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
 
     const isMyTurn = gameState.currentPlayerSeat === mySeat
         && gameState.state === 'active'
-        && gameState.phase === 'active';
+        && (gameState.phase === 'active' || gameState.phase === 'chain_window');
 
     // Opponent positions around the table
     const oppPositions = {
