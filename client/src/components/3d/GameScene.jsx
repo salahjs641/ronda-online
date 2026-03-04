@@ -38,11 +38,11 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
             {/* ═══ CAMERA ═══ */}
             <PerspectiveCamera
                 makeDefault
-                position={[0, 2.8, 3.8]}
-                rotation={[-0.38, 0, 0]}
-                fov={60}
+                position={[0, 3.0, 4.0]}
+                rotation={[-0.4, 0, 0]}
+                fov={58}
                 near={0.1}
-                far={50}
+                far={60}
             >
                 <Suspense fallback={null}>
                     <Hand3D
@@ -53,166 +53,228 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
                 </Suspense>
             </PerspectiveCamera>
 
-            {/* ═══ LIGHTING — Warm, atmospheric Moroccan parlor ═══ */}
+            {/* ═══ LIGHTING — Warm outdoor riad courtyard, late afternoon ═══ */}
 
-            {/* Cool sky fill */}
-            <hemisphereLight intensity={0.5} color="#b8c4e0" groundColor="#2a1a0a" />
+            {/* Sky hemisphere */}
+            <hemisphereLight intensity={0.6} color="#87CEEB" groundColor="#8B6914" />
 
-            {/* Warm ambient base */}
-            <ambientLight intensity={1.0} color="#e8c99a" />
+            {/* Warm ambient — sunny courtyard feel */}
+            <ambientLight intensity={0.8} color="#ffe4b5" />
 
-            {/* Main overhead chandelier spotlight */}
-            <spotLight
-                position={[0, 4.5, 0]}
-                angle={0.85}
-                penumbra={0.6}
-                intensity={22}
-                color="#ffcc66"
+            {/* Main sun — golden hour directional */}
+            <directionalLight
+                position={[5, 8, 3]}
+                intensity={3}
+                color="#ffd080"
                 castShadow
                 shadow-bias={-0.0001}
                 shadow-mapSize={[2048, 2048]}
             />
 
-            {/* WARM TABLE CENTER — golden pool of light */}
-            <pointLight position={[0, 0.6, 0]} intensity={5} color="#ffa94d" distance={5} decay={2} />
+            {/* Table spotlight — warm pool of light */}
+            <spotLight
+                position={[0, 5, 0]}
+                angle={0.7}
+                penumbra={0.7}
+                intensity={15}
+                color="#ffcc66"
+                castShadow
+            />
 
-            {/* POV fill on player's cards */}
-            <pointLight position={[0, 2.5, 3.2]} intensity={4} color="#fff5e6" distance={7} decay={2} />
+            {/* Fill lights */}
+            <pointLight position={[0, 0.5, 0]} intensity={4} color="#ffa94d" distance={5} decay={2} />
+            <pointLight position={[0, 2.5, 3.5]} intensity={3} color="#fff5e6" distance={6} decay={2} />
+            <pointLight position={[-3, 2, 0]} intensity={2} color="#ffd699" distance={5} decay={2} />
+            <pointLight position={[3, 2, 0]} intensity={2} color="#ffd699" distance={5} decay={2} />
 
-            {/* Side fills for opponents */}
-            <pointLight position={[-3.5, 2.5, 0]} intensity={2.5} color="#ffd699" distance={6} decay={2} />
-            <pointLight position={[3.5, 2.5, 0]} intensity={2.5} color="#ffd699" distance={6} decay={2} />
+            {/* Warm sky-like background */}
+            <color attach="background" args={['#1a120a']} />
 
-            {/* Backlight for depth */}
-            <pointLight position={[0, 2, -4]} intensity={1.5} color="#cc8844" distance={6} decay={2} />
+            {/* ═══ RIAD COURTYARD ENVIRONMENT ═══ */}
 
-            <color attach="background" args={['#0a0704']} />
-
-            {/* ═══ ENVIRONMENT ═══ */}
-
-            {/* Ornate Hanging Lantern — Moroccan pierced metal */}
-            <group position={[0, 4, 0]}>
-                {/* Chain links */}
-                {[0, 1, 2, 3].map((i) => (
-                    <mesh key={`chain-${i}`} position={[0, 0.5 + i * 0.22, 0]}>
-                        <torusGeometry args={[0.03, 0.008, 6, 12]} />
-                        <meshPhysicalMaterial color="#3a2010" metalness={0.85} roughness={0.3} />
-                    </mesh>
-                ))}
-                {/* Lantern cage — wireframe octahedron */}
-                <mesh castShadow>
-                    <octahedronGeometry args={[0.45, 0]} />
-                    <meshPhysicalMaterial
-                        color="#c49a3c"
-                        metalness={0.9}
-                        roughness={0.15}
-                        wireframe
-                        clearcoat={0.6}
-                        emissive="#8a6a1a"
-                        emissiveIntensity={0.1}
-                    />
-                </mesh>
-                {/* Warm internal glow orb */}
-                <mesh>
-                    <sphereGeometry args={[0.35, 16, 16]} />
-                    <meshBasicMaterial color="#ffc266" transparent opacity={0.6} />
-                </mesh>
-                {/* Secondary glow */}
-                <mesh>
-                    <sphereGeometry args={[0.2, 12, 12]} />
-                    <meshBasicMaterial color="#ffe0a0" />
-                </mesh>
-            </group>
-
-            {/* Side wall lanterns */}
-            {[-1, 1].map((side) => (
-                <group key={`lantern-${side}`} position={[side * 5, 3, -2]}>
-                    <mesh>
-                        <octahedronGeometry args={[0.2, 0]} />
-                        <meshPhysicalMaterial color="#c49a3c" metalness={0.9} roughness={0.15} wireframe />
-                    </mesh>
-                    <mesh>
-                        <sphereGeometry args={[0.15, 10, 10]} />
-                        <meshBasicMaterial color="#ffcc66" transparent opacity={0.4} />
-                    </mesh>
-                    <pointLight position={[0, 0, 0]} intensity={1} color="#ffa040" distance={4} decay={2} />
-                </group>
-            ))}
-
-            {/* ═══ FLOOR — Ornate Moroccan tiles with rug ═══ */}
-            <group>
-                {/* Main floor */}
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.62, 0]} receiveShadow>
-                    <planeGeometry args={[20, 20]} />
-                    <meshPhysicalMaterial
-                        color="#1a1410"
-                        roughness={0.6}
-                        metalness={0.12}
-                        clearcoat={0.35}
-                        clearcoatRoughness={0.2}
-                    />
-                </mesh>
-                {/* Decorative rug — outer border */}
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.615, 0]} receiveShadow>
-                    <planeGeometry args={[7.5, 7.5]} />
-                    <meshPhysicalMaterial
-                        color="#4a1a12"
-                        roughness={0.92}
-                        clearcoat={0.08}
-                    />
-                </mesh>
-                {/* Inner rug pattern */}
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.61, 0]}>
-                    <planeGeometry args={[6.5, 6.5]} />
-                    <meshPhysicalMaterial
-                        color="#5a2218"
-                        roughness={0.95}
-                        clearcoat={0.05}
-                    />
-                </mesh>
-                {/* Center medallion */}
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.605, 0]}>
-                    <circleGeometry args={[2.5, 48]} />
-                    <meshPhysicalMaterial
-                        color="#3a1510"
-                        roughness={0.95}
-                    />
-                </mesh>
-            </group>
-
-            {/* ═══ WALLS — Curved Moroccan-style alcove ═══ */}
-            <mesh position={[0, 2.5, 0]} receiveShadow>
-                <cylinderGeometry args={[9, 9, 9, 48, 1, true, -Math.PI / 1.5, Math.PI * 1.35]} />
+            {/* FLOOR — Terracotta tiles */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.88, 0]} receiveShadow>
+                <planeGeometry args={[24, 24]} />
                 <meshPhysicalMaterial
-                    color="#25140c"
-                    roughness={0.75}
-                    clearcoat={0.12}
-                    clearcoatRoughness={0.5}
-                    side={2}
+                    color="#c47a4a"
+                    roughness={0.8}
+                    metalness={0.05}
+                    clearcoat={0.15}
                 />
             </mesh>
 
-            {/* Ceiling */}
-            <mesh position={[0, 6.5, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
-                <circleGeometry args={[9, 48]} />
-                <meshPhysicalMaterial color="#1a0e08" roughness={0.9} side={2} />
+            {/* Floor tile pattern — diamond grid */}
+            <mesh rotation={[-Math.PI / 2, 0, Math.PI / 4]} position={[0, -0.875, 0]} receiveShadow>
+                <planeGeometry args={[8, 8]} />
+                <meshPhysicalMaterial
+                    color="#b06a3a"
+                    roughness={0.85}
+                />
             </mesh>
 
-            {/* Decorative arched wall niches */}
-            {[-1, 0, 1].map((i) => (
-                <group key={`niche-${i}`} position={[i * 3.5, 2.5, -7]} rotation={[0, i * 0.15, 0]}>
+            {/* ═══ TADELAKT WALLS — Moroccan plaster walls ═══ */}
+            {/* Back wall */}
+            <mesh position={[0, 3, -8]} receiveShadow>
+                <planeGeometry args={[20, 8]} />
+                <meshPhysicalMaterial
+                    color="#e8d5b8"
+                    roughness={0.7}
+                    metalness={0.02}
+                    clearcoat={0.2}
+                    clearcoatRoughness={0.4}
+                />
+            </mesh>
+
+            {/* Left wall */}
+            <mesh position={[-8, 3, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
+                <planeGeometry args={[20, 8]} />
+                <meshPhysicalMaterial color="#e0cca8" roughness={0.7} clearcoat={0.2} />
+            </mesh>
+
+            {/* Right wall */}
+            <mesh position={[8, 3, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
+                <planeGeometry args={[20, 8]} />
+                <meshPhysicalMaterial color="#e0cca8" roughness={0.7} clearcoat={0.2} />
+            </mesh>
+
+            {/* ═══ HORSESHOE ARCHES on back wall ═══ */}
+            {[-3, 0, 3].map((x, i) => (
+                <group key={`arch-${i}`} position={[x, 2.5, -7.9]}>
+                    {/* Arch frame */}
                     <mesh>
-                        <boxGeometry args={[1.2, 2, 0.15]} />
+                        <boxGeometry args={[1.8, 3.5, 0.15]} />
                         <meshPhysicalMaterial
-                            color="#1e100a"
+                            color="#d4c0a0"
+                            roughness={0.65}
+                            clearcoat={0.15}
+                        />
+                    </mesh>
+                    {/* Dark arch opening */}
+                    <mesh position={[0, -0.3, 0.02]}>
+                        <boxGeometry args={[1.2, 2.5, 0.12]} />
+                        <meshPhysicalMaterial color="#2a1a0e" roughness={0.9} />
+                    </mesh>
+                    {/* Arch top — semicircle */}
+                    <mesh position={[0, 0.95, 0.02]}>
+                        <sphereGeometry args={[0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                        <meshPhysicalMaterial color="#2a1a0e" roughness={0.9} />
+                    </mesh>
+                    {/* Zellige tile strip at the arch base */}
+                    <mesh position={[0, -1.5, 0.05]}>
+                        <boxGeometry args={[1.6, 0.4, 0.08]} />
+                        <meshPhysicalMaterial
+                            color="#1a5a4a"
+                            roughness={0.5}
+                            metalness={0.1}
+                            clearcoat={0.4}
+                        />
+                    </mesh>
+                </group>
+            ))}
+
+            {/* ═══ ZELLIGE TILE STRIP — Along bottom of walls ═══ */}
+            <mesh position={[0, -0.2, -7.95]}>
+                <boxGeometry args={[16, 1.2, 0.08]} />
+                <meshPhysicalMaterial
+                    color="#1a6a5a"
+                    roughness={0.5}
+                    metalness={0.1}
+                    clearcoat={0.4}
+                />
+            </mesh>
+
+            {/* ═══ HANGING MOROCCAN LANTERNS ═══ */}
+            {[[-2, 4.5, -4], [2, 4.5, -4], [0, 5, -2]].map((pos, i) => (
+                <group key={`lantern-${i}`} position={pos}>
+                    {/* Chain */}
+                    <mesh position={[0, 0.8, 0]}>
+                        <cylinderGeometry args={[0.01, 0.01, 1.5]} />
+                        <meshPhysicalMaterial color="#3a2010" metalness={0.8} roughness={0.4} />
+                    </mesh>
+                    {/* Lantern body — pierced metal */}
+                    <mesh castShadow>
+                        <dodecahedronGeometry args={[0.35, 0]} />
+                        <meshPhysicalMaterial
+                            color="#c49a3c"
+                            metalness={0.85}
+                            roughness={0.2}
+                            wireframe
+                            clearcoat={0.5}
+                        />
+                    </mesh>
+                    {/* Warm glow inside */}
+                    <mesh>
+                        <sphereGeometry args={[0.2, 12, 12]} />
+                        <meshBasicMaterial color="#ffc266" transparent opacity={0.5} />
+                    </mesh>
+                    <pointLight
+                        intensity={i === 2 ? 3 : 1.5}
+                        color="#ffa040"
+                        distance={6}
+                        decay={2}
+                    />
+                </group>
+            ))}
+
+            {/* ═══ POTTED PLANTS — Orange trees / palms ═══ */}
+            {[[-5, 0, -5], [5, 0, -5]].map((pos, i) => (
+                <group key={`plant-${i}`} position={pos}>
+                    {/* Terracotta pot */}
+                    <mesh position={[0, -0.3, 0]} castShadow>
+                        <cylinderGeometry args={[0.4, 0.55, 0.7, 16]} />
+                        <meshPhysicalMaterial
+                            color="#b05a2a"
                             roughness={0.85}
                             clearcoat={0.1}
                         />
                     </mesh>
-                    {/* Arch top */}
-                    <mesh position={[0, 1.0, 0]}>
-                        <sphereGeometry args={[0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                        <meshPhysicalMaterial color="#1e100a" roughness={0.85} />
+                    {/* Pot rim */}
+                    <mesh position={[0, 0.05, 0]}>
+                        <torusGeometry args={[0.42, 0.04, 6, 16]} />
+                        <meshPhysicalMaterial color="#b05a2a" roughness={0.85} />
+                    </mesh>
+                    {/* Trunk */}
+                    <mesh position={[0, 0.8, 0]} castShadow>
+                        <cylinderGeometry args={[0.06, 0.08, 1.5, 8]} />
+                        <meshPhysicalMaterial color="#5a3a1a" roughness={0.8} />
+                    </mesh>
+                    {/* Foliage — cluster of spheres */}
+                    {[[0, 0.2, 0], [0.3, 0, 0.1], [-0.2, 0.1, -0.2], [0.1, -0.1, 0.3]].map((off, j) => (
+                        <mesh key={j} position={[off[0], 1.6 + off[1], off[2]]} castShadow>
+                            <sphereGeometry args={[0.35 + j * 0.05, 12, 10]} />
+                            <meshPhysicalMaterial
+                                color="#2a6a30"
+                                roughness={0.9}
+                                clearcoat={0.1}
+                            />
+                        </mesh>
+                    ))}
+                </group>
+            ))}
+
+            {/* ═══ CUSHIONS / POUFS — Seating around the table ═══ */}
+            {[
+                [0, -0.5, 3.5, 0],
+                [-3.5, -0.5, 0, Math.PI / 2],
+                [0, -0.5, -3.5, Math.PI],
+                [3.5, -0.5, 0, -Math.PI / 2]
+            ].map(([x, y, z, ry], i) => (
+                <group key={`cushion-${i}`} position={[x, y, z]} rotation={[0, ry, 0]}>
+                    <mesh castShadow receiveShadow>
+                        <cylinderGeometry args={[0.45, 0.5, 0.25, 16]} />
+                        <meshPhysicalMaterial
+                            color={['#8b2020', '#1a6050', '#c9a84c', '#2a4a8a'][i]}
+                            roughness={0.9}
+                            clearcoat={0.05}
+                        />
+                    </mesh>
+                    {/* Cushion top — softer, puffed */}
+                    <mesh position={[0, 0.15, 0]} castShadow>
+                        <sphereGeometry args={[0.42, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3]} />
+                        <meshPhysicalMaterial
+                            color={['#a03030', '#2a7060', '#d4b060', '#3a5a9a'][i]}
+                            roughness={0.92}
+                        />
                     </mesh>
                 </group>
             ))}
