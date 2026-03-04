@@ -1436,6 +1436,92 @@ body {
   }
 }
 
+/* --- Chain Window Banner --- */
+.chain-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 3000;
+  animation: chain-pulse 1.5s infinite;
+}
+
+.chain-badge {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  padding: 10px 40px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.chain-badge.bant {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(201, 168, 76, 0.1));
+  color: #ffd700;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.4);
+  border: 2px solid rgba(255, 215, 0, 0.4);
+}
+
+.chain-badge.hbal {
+  background: linear-gradient(135deg, rgba(255, 50, 0, 0.2), rgba(255, 100, 0, 0.1));
+  color: #ff4500;
+  text-shadow: 0 0 30px rgba(255, 69, 0, 0.8), 0 0 60px rgba(255, 69, 0, 0.4);
+  border: 2px solid rgba(255, 69, 0, 0.4);
+}
+
+.chain-info {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.chain-count {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 2px;
+}
+
+.chain-timer {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ff4444;
+  text-shadow: 0 0 15px rgba(255, 68, 68, 0.6);
+  animation: timer-tick 1s infinite;
+}
+
+.chain-hint {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+}
+
+@keyframes chain-pulse {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.03);
+  }
+}
+
+@keyframes timer-tick {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* --- Non-blocking Announcement Prompt --- */
 .announcement-prompt-pos {
   position: absolute;

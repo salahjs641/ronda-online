@@ -232,6 +232,42 @@ function verifyAnnouncements(gs) {
 }
 
 // ═══════════════════════════════════════════
+//  RESOLVE CHAIN (called by timer or when chain breaks)
+// ═══════════════════════════════════════════
+
+function resolveChain(gs) {
+    if (!gs.chainPending || !gs.chainPending.active) return;
+
+    const capturer = getPlayerBySeat(gs, gs.chainPending.lastCapturerSeat);
+    if (capturer) {
+        // Remove ALL chain cards from the table
+        const chainCodes = new Set(gs.chainPending.cards.map(c => c.code));
+        const removedCards = gs.tableCards.filter(c => chainCodes.has(c.code));
+        gs.tableCards = gs.tableCards.filter(c => !chainCodes.has(c.code));
+
+        // Give all chain cards to the last capturer
+        capturer.capturedCards.push(...gs.chainPending.cards);
+        gs.lastCapturer = capturer.seat;
+
+        // Store capture info for animation
+        gs.lastCapture = {
+            card: gs.chainPending.cards[gs.chainPending.cards.length - 1],
+            captured: gs.chainPending.cards,
+            seat: capturer.seat,
+            timestamp: Date.now(),
+            chainCount: gs.chainPending.count,
+            isChainResolve: true
+        };
+    }
+
+    // Clear chain state
+    gs.chainPending = null;
+    gs.captureChain = { active: false, value: null, count: 0 };
+    gs.chainWindowExpiresAt = null;
+    if (gs.phase === 'chain_window') gs.phase = 'active';
+}
+
+// ═══════════════════════════════════════════
 //  PLAY CARD
 // ═══════════════════════════════════════════
 
@@ -243,6 +279,7 @@ function playCard(gs, seatNumber, cardCode) {
     if (current.seat !== seatNumber) return { success: false, error: 'Not your turn' };
     if (gs.state !== 'active') return { success: false, error: 'Game not active' };
     if (gs.phase === 'announcing') return { success: false, error: 'Wait for announcements' };
+    // Allow playing during chain_window phase (that's the whole point)
 
     const cardIndex = player.hand.findIndex(c => c.code === cardCode);
     if (cardIndex === -1) return { success: false, error: 'Card not in your hand' };
@@ -258,88 +295,95 @@ function playCard(gs, seatNumber, cardCode) {
         captured: [], bantEarned: 0, hbalEarned: 0, events: [], tableCleared: false,
     };
 
+    // ── Resolve any pending chain if player plays a different value ──
+    if (gs.chainPending && gs.chainPending.active && card.value !== gs.chainPending.value) {
+        resolveChain(gs);
+    }
+
     // 1. Direct match capture + ascending sequence
     const matchIndex = gs.tableCards.findIndex(c => c.value === card.value);
 
-    // Track sequential match chain (Bant -> Hbal -> 2 Hbal)
     if (!gs.captureChain) {
         gs.captureChain = { active: false, value: null, count: 0 };
     }
 
     if (matchIndex !== -1) {
-        let matchedCard = gs.tableCards[matchIndex];
-        let remainingCards = gs.tableCards.filter((_, i) => i !== matchIndex);
+        const matchedCard = gs.tableCards[matchIndex];
+        const remainingCards = gs.tableCards.filter((_, i) => i !== matchIndex);
 
-        // Check if this is a Bant (hitting the card just dropped by opponent)
         const isBant = gs.lastPlayedCard
             && gs.lastPlayedCard.value === card.value
             && gs.lastPlayedBySeat !== player.seat;
 
-        // Check if chain is already active and this continues it
-        const isChainContinuation = gs.captureChain.active
-            && gs.captureChain.value === card.value
-            && gs.lastPlayedBySeat !== player.seat;
+        const isChainContinuation = gs.chainPending && gs.chainPending.active
+            && gs.chainPending.value === card.value;
 
         if (isChainContinuation) {
-            // Chain continues (3rd, 4th capture of same value)
-            gs.captureChain.count++;
+            // ═══ CHAIN CONTINUATION (Hbal) ═══
+            gs.chainPending.count++;
+            gs.captureChain.count = gs.chainPending.count;
+            gs.chainPending.lastCapturerSeat = player.seat;
+            gs.chainPending.lastCapturerTeam = player.team;
 
-            if (gs.captureChain.count === 3) {
+            // Add both cards to chain pending
+            gs.chainPending.cards.push(
+                { suit: matchedCard.suit, value: matchedCard.value, code: matchedCard.code },
+                { suit: card.suit, value: card.value, code: card.code }
+            );
+
+            // Remove matched card, add played card to table (for display)
+            gs.tableCards = remainingCards;
+            gs.tableCards.push({ ...card, playedBySeat: player.seat, playedByTeam: player.team, isChainCard: true });
+
+            if (gs.chainPending.count === 3) {
                 getTeamData(gs, player.team).hbal += 1;
                 result.hbalEarned += 1;
                 result.events.push({ type: 'HBAL', description: `${player.username} kept the chain going! (1 Hbal)` });
-            } else if (gs.captureChain.count >= 4) {
+            } else if (gs.chainPending.count >= 4) {
                 getTeamData(gs, player.team).hbal += 2;
                 result.hbalEarned += 2;
                 result.events.push({ type: 'HBAL', description: `${player.username} finished the chain! (2 Hbal)` });
             }
 
-            // Chain capture: take the matched card, but LEAVE played card on table
-            // so the next player can continue the chain
-            const seqIndices = findAscendingSequence(card.value, remainingCards);
-            const capturedCards = [matchedCard];
-            capturedCards.push(...seqIndices.map(i => remainingCards[i]));
-
-            const capturedCodes = new Set(capturedCards.map(c => c.code));
-            gs.tableCards = gs.tableCards.filter(c => !capturedCodes.has(c.code));
-
-            // Played card goes ON the table (not to captured pile) to keep chain alive
-            gs.tableCards.push({ ...card, playedBySeat: player.seat, playedByTeam: player.team });
-
-            // Only captured cards go to player's pile (not the played card)
-            player.capturedCards.push(...capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })));
-            result.captured = capturedCards;
+            gs.phase = 'chain_window';
+            gs.chainWindowExpiresAt = Date.now() + 10000;
+            result.chainActive = true;
             gs.lastCapturer = player.seat;
 
         } else if (isBant) {
-            // New Bant! Start a chain
+            // ═══ NEW BANT — cards stay on table, 10s window ═══
             gs.captureChain = { active: true, value: card.value, count: 2 };
             getTeamData(gs, player.team).bant += 1;
             result.bantEarned += 1;
             result.events.push({ type: 'BANT', description: `${player.username} hit the card! (1 Bant)` });
 
-            // Bant capture: take the matched card, but LEAVE played card on table
-            // so opponent can try to counter with Hbal
-            const seqIndices = findAscendingSequence(card.value, remainingCards);
-            const capturedCards = [matchedCard];
-            capturedCards.push(...seqIndices.map(i => remainingCards[i]));
+            // Both cards stay on table — stored in chainPending
+            gs.chainPending = {
+                active: true,
+                value: card.value,
+                count: 2,
+                lastCapturerSeat: player.seat,
+                lastCapturerTeam: player.team,
+                cards: [
+                    { suit: matchedCard.suit, value: matchedCard.value, code: matchedCard.code },
+                    { suit: card.suit, value: card.value, code: card.code }
+                ]
+            };
 
-            const capturedCodes = new Set(capturedCards.map(c => c.code));
-            gs.tableCards = gs.tableCards.filter(c => !capturedCodes.has(c.code));
+            // Mark matched card, add played card to table
+            const mIdx = gs.tableCards.findIndex(c => c.code === matchedCard.code);
+            if (mIdx !== -1) gs.tableCards[mIdx].isChainCard = true;
+            gs.tableCards.push({ ...card, playedBySeat: player.seat, playedByTeam: player.team, isChainCard: true });
 
-            // Played card goes ON the table to keep chain alive
-            gs.tableCards.push({ ...card, playedBySeat: player.seat, playedByTeam: player.team });
-
-            // Only captured cards go to player's pile
-            player.capturedCards.push(...capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })));
-            result.captured = capturedCards;
+            gs.phase = 'chain_window';
+            gs.chainWindowExpiresAt = Date.now() + 10000;
+            result.chainActive = true;
             gs.lastCapturer = player.seat;
 
         } else {
-            // Normal capture — no chain, reset
+            // ═══ NORMAL CAPTURE ═══
             gs.captureChain = { active: false, value: null, count: 0 };
 
-            // Gather sequence captures
             const seqIndices = findAscendingSequence(card.value, remainingCards);
             const capturedCards = [matchedCard];
             capturedCards.push(...seqIndices.map(i => remainingCards[i]));
@@ -347,23 +391,21 @@ function playCard(gs, seatNumber, cardCode) {
             const capturedCodes = new Set(capturedCards.map(c => c.code));
             gs.tableCards = gs.tableCards.filter(c => !capturedCodes.has(c.code));
 
-            // Normal: both played card AND captured cards go to player's pile
             player.capturedCards.push(card, ...capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })));
             result.captured = capturedCards;
             gs.lastCapturer = player.seat;
+
+            gs.lastCapture = {
+                card: { suit: card.suit, value: card.value, code: card.code },
+                captured: capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })),
+                seat: player.seat,
+                timestamp: Date.now(),
+                chainCount: 0
+            };
         }
 
-        // Store capture info in game state for reliable client delivery
-        gs.lastCapture = {
-            card: { suit: card.suit, value: card.value, code: card.code },
-            captured: result.captured.map(c => ({ suit: c.suit, value: c.value, code: c.code })),
-            seat: player.seat,
-            timestamp: Date.now(),
-            chainCount: gs.captureChain.active ? gs.captureChain.count : 0
-        };
-
-        // Table cleared (Missa) -> 1 Bant
-        if (result.captured.length > 0 && gs.tableCards.length === 0) {
+        // Missa check (only non-chain)
+        if (!result.chainActive && result.captured.length > 0 && gs.tableCards.length === 0) {
             getTeamData(gs, player.team).bant += 1;
             result.bantEarned += 1;
             result.tableCleared = true;
@@ -371,7 +413,10 @@ function playCard(gs, seatNumber, cardCode) {
         }
 
     } else {
-        // Did not match -> Drop card on table, break chain
+        // No match — resolve any active chain, drop card on table
+        if (gs.chainPending && gs.chainPending.active) {
+            resolveChain(gs);
+        }
         gs.captureChain = { active: false, value: null, count: 0 };
         gs.tableCards.push({ ...card, playedBySeat: player.seat, playedByTeam: player.team });
     }
@@ -577,11 +622,13 @@ function getPlayerView(gs, seatNumber) {
         winner: gs.winner,
         lastAction: gs.lastAction,
         lastCapture: gs.lastCapture || null,
-        captureChain: gs.captureChain ? {
-            active: gs.captureChain.active,
-            value: gs.captureChain.value,
-            count: gs.captureChain.count
+        chainPending: gs.chainPending ? {
+            active: gs.chainPending.active,
+            value: gs.chainPending.value,
+            count: gs.chainPending.count,
+            cards: gs.chainPending.cards
         } : null,
+        chainWindowExpiresAt: gs.chainWindowExpiresAt || null,
         cardCount: gs.cardCount,
         opponents: gs.players
             .filter(p => p.seat !== seatNumber)
@@ -592,4 +639,4 @@ function getPlayerView(gs, seatNumber) {
     };
 }
 
-module.exports = { initMatch, playCard, claimDfu3, startNewRound, getPlayerView, announce, skipAnnounce, forceSkipAnnouncing };
+module.exports = { initMatch, playCard, claimDfu3, startNewRound, getPlayerView, announce, skipAnnounce, forceSkipAnnouncing, resolveChain };

@@ -28,7 +28,9 @@ export default function GameHUD({
 }) {
     const [eventLog, setEventLog] = useState([]);
     const [timeLeft, setTimeLeft] = useState(null);
+    const [chainTimeLeft, setChainTimeLeft] = useState(null);
 
+    // Turn timer
     useEffect(() => {
         if (!gameState?.turnExpiresAt || gameState.phase !== 'active' || gameState.state !== 'active') {
             setTimeLeft(null);
@@ -45,6 +47,23 @@ export default function GameHUD({
         return () => clearInterval(interval);
     }, [gameState?.turnExpiresAt, gameState?.phase, gameState?.state]);
 
+    // Chain window timer
+    useEffect(() => {
+        if (!gameState?.chainWindowExpiresAt || !gameState?.chainPending?.active) {
+            setChainTimeLeft(null);
+            return;
+        }
+
+        const tick = () => {
+            const remaining = Math.max(0, Math.ceil((gameState.chainWindowExpiresAt - Date.now()) / 1000));
+            setChainTimeLeft(remaining);
+        };
+
+        tick();
+        const interval = setInterval(tick, 200);
+        return () => clearInterval(interval);
+    }, [gameState?.chainWindowExpiresAt, gameState?.chainPending]);
+
     useEffect(() => {
         if (gameState?.lastAction) {
             const action = gameState.lastAction;
@@ -57,13 +76,16 @@ export default function GameHUD({
 
     const mySeat = roomInfo.seat;
     const myTeam = roomInfo.team;
-    const isMyTurn = gameState.currentPlayerSeat === mySeat && gameState.state === 'active' && gameState.phase === 'active';
+    const isMyTurn = gameState.currentPlayerSeat === mySeat && gameState.state === 'active'
+        && (gameState.phase === 'active' || gameState.phase === 'chain_window');
     const myTeamData = myTeam === 'A' ? gameState.teamA : gameState.teamB;
 
     const canClaimKbir = !myTeamData.dfu3Kbir && myTeamData.hbal >= 4 && myTeamData.bant >= 2;
     const canClaimSghir = myTeamData.dfu3Kbir && !myTeamData.dfu3Sghir && myTeamData.hbal >= 3 && myTeamData.bant >= 4;
 
     const myAnnounceDone = gameState.announceDone?.[mySeat];
+    const chainActive = gameState.chainPending?.active;
+    const chainCount = gameState.chainPending?.count || 0;
 
     return (
         <div className="game-hud-overlay">
@@ -85,6 +107,24 @@ export default function GameHUD({
                 )}
             </div>
 
+            {/* Chain Window Banner */}
+            {chainActive && (
+                <div className="chain-banner">
+                    <div className={`chain-badge ${chainCount >= 3 ? 'hbal' : 'bant'}`}>
+                        {chainCount >= 3 ? '🔥 HBAL!' : '⚡ BANT!'}
+                    </div>
+                    <div className="chain-info">
+                        <span className="chain-count">{chainCount} cards in chain</span>
+                        {chainTimeLeft !== null && (
+                            <span className="chain-timer">{chainTimeLeft}s</span>
+                        )}
+                    </div>
+                    <div className="chain-hint">
+                        {isMyTurn ? 'Play the same value to continue!' : 'Waiting for next player...'}
+                    </div>
+                </div>
+            )}
+
             {/* Scores Side Panels */}
             <div className="score-hud">
                 <ScorePanel label="TEAM A" data={gameState.teamA} isMyTeam={myTeam === 'A'} />
@@ -92,7 +132,7 @@ export default function GameHUD({
             </div>
 
             {/* Turn Indicator */}
-            {isMyTurn && <div className="turn-banner">YOUR TURN {timeLeft !== null && `(${timeLeft}s)`}</div>}
+            {isMyTurn && !chainActive && <div className="turn-banner">YOUR TURN {timeLeft !== null && `(${timeLeft}s)`}</div>}
 
             {/* Opponent Turn Indicator */}
             {!isMyTurn && gameState.state === 'active' && gameState.phase === 'active' && (

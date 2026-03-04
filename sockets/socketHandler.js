@@ -10,6 +10,44 @@ const games = new Map();
 const playerSockets = new Map();
 const announceTimeouts = new Map();
 const turnTimeouts = new Map();
+const chainTimeouts = new Map();
+
+function clearChainTimer(roomCode) {
+    if (chainTimeouts.has(roomCode)) {
+        clearTimeout(chainTimeouts.get(roomCode));
+        chainTimeouts.delete(roomCode);
+    }
+}
+
+function startChainTimer(io, roomCode) {
+    clearChainTimer(roomCode);
+    const gs = games.get(roomCode);
+    if (!gs || gs.state !== 'active') return;
+
+    const timeout = setTimeout(() => {
+        const currentGs = games.get(roomCode);
+        if (!currentGs || !currentGs.chainPending || !currentGs.chainPending.active) return;
+
+        // Resolve the chain — give all cards to last capturer
+        engine.resolveChain(currentGs);
+
+        io.to(roomCode).emit('chat-message', {
+            username: 'SYSTEM',
+            text: `⛳ Chain resolved! Cards go to the last capturer.`,
+            team: 'SYSTEM'
+        });
+
+        broadcastGameState(io, roomCode);
+        persistState(roomCode);
+
+        // Resume normal turn timer
+        if (currentGs.state === 'active' && currentGs.phase === 'active') {
+            startTurnTimer(io, roomCode);
+        }
+    }, 10000);
+
+    chainTimeouts.set(roomCode, timeout);
+}
 
 function clearTurnTimer(roomCode) {
     if (turnTimeouts.has(roomCode)) {
@@ -192,14 +230,22 @@ function setupSocketHandlers(io) {
             persistState(info.roomCode);
             callback({ success: true });
 
-            if (gs.state === 'active') {
+            // Handle chain window timer
+            if (result.chainActive) {
+                // Bant/Hbal chain started — pause turn timer, start chain timer
+                clearTurnTimer(info.roomCode);
+                startChainTimer(io, info.roomCode);
+            } else if (gs.state === 'active') {
+                // Normal play — clear any chain timer, start turn timer
+                clearChainTimer(info.roomCode);
                 if (gs.phase === 'announcing') {
                     startAnnounceTimer(io, info.roomCode);
-                } else {
+                } else if (gs.phase === 'active') {
                     startTurnTimer(io, info.roomCode);
                 }
             } else {
                 clearTurnTimer(info.roomCode);
+                clearChainTimer(info.roomCode);
             }
         });
 
