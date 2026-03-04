@@ -55,32 +55,36 @@ export default function GameScene({ gameState, roomInfo, onPlayCard, lastEvent }
                 </Suspense>
             </PerspectiveCamera>
 
-            {/* ═══ LIGHTING — Atmospheric & Cinematic Moroccan Parlor ═══ */}
-            {/* Subtle cool fill light to mimic moonlight from windows */}
-            <hemisphereLight intensity={0.2} color="#4a5d80" groundColor="#0a0a0a" />
+            {/* ═══ LIGHTING — Warm Moroccan Parlor (bright enough to play) ═══ */}
+            {/* Cool fill light from above */}
+            <hemisphereLight intensity={0.6} color="#b8c4e0" groundColor="#2a1a0a" />
 
-            {/* Very dim ambient base */}
-            <ambientLight intensity={0.4} color="#cca676" />
+            {/* Warm ambient base — enough to see everything */}
+            <ambientLight intensity={1.2} color="#e8c99a" />
 
-            {/* Dramatic center overhead spotlight mimicking a low-hanging chandelier */}
+            {/* Center overhead spotlight — warm chandelier */}
             <spotLight
                 position={[0, 4, 0]}
-                angle={0.8}
-                penumbra={0.6}
-                intensity={12}
-                color="#ffb854"
+                angle={0.9}
+                penumbra={0.5}
+                intensity={25}
+                color="#ffcc66"
                 castShadow
                 shadow-bias={-0.0001}
                 shadow-mapSize={[2048, 2048]}
             />
 
             {/* Warm table-center bounce light */}
-            <pointLight position={[0, 0.5, 0]} intensity={2.5} color="#e08e36" distance={4} decay={2} />
+            <pointLight position={[0, 0.5, 0]} intensity={6} color="#ffa94d" distance={6} decay={2} />
 
-            {/* POV Fill - Just enough to see cards */}
-            <pointLight position={[0, 2, 2]} intensity={1.5} color="#ffffff" distance={5} decay={2} />
+            {/* POV Fill — illuminate player's cards */}
+            <pointLight position={[0, 2.5, 3]} intensity={5} color="#fff5e6" distance={8} decay={2} />
 
-            <color attach="background" args={['#050302']} />
+            {/* Side fills so opponents are visible */}
+            <pointLight position={[-3, 2, 0]} intensity={3} color="#ffd699" distance={6} decay={2} />
+            <pointLight position={[3, 2, 0]} intensity={3} color="#ffd699" distance={6} decay={2} />
+
+            <color attach="background" args={['#0d0906']} />
 
             {/* ═══ ENVIRONMENT DETAILS ═══ */}
             {/* Ornate Hanging Lantern */}
