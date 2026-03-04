@@ -263,18 +263,23 @@ function playCard(gs, seatNumber, cardCode) {
         gs.captureChain = { active: false, value: null, count: 0 };
     }
 
-    if (matchIndex !== -1) {
-        const matchedCard = gs.tableCards[matchIndex];
+    let isChainContinuation = false;
+    if (gs.captureChain.active && gs.captureChain.value === card.value && gs.lastPlayedBySeat !== player.seat) {
+        isChainContinuation = true;
+    }
+
+    if (matchIndex !== -1 || isChainContinuation) {
+        let matchedCard = null;
+        let remainingCards = gs.tableCards;
+        if (matchIndex !== -1) {
+            matchedCard = gs.tableCards[matchIndex];
+            remainingCards = gs.tableCards.filter((_, i) => i !== matchIndex);
+        }
 
         // Immediate Capture Chain Logic (Moroccan Special Rule)
-        if (gs.captureChain.active && gs.captureChain.value === card.value && gs.lastPlayedBySeat !== player.seat) {
+        if (isChainContinuation) {
             gs.captureChain.count++;
-            if (gs.captureChain.count === 2) {
-                // Second immediate capture = 1 Bant
-                getTeamData(gs, player.team).bant += 1;
-                result.bantEarned += 1;
-                result.events.push({ type: 'BANT', description: `${player.username} hit the first capture chain! (1 Bant)` });
-            } else if (gs.captureChain.count === 3) {
+            if (gs.captureChain.count === 3) {
                 // Third immediate capture = 1 Hbal
                 getTeamData(gs, player.team).hbal += 1;
                 result.hbalEarned += 1;
@@ -299,9 +304,10 @@ function playCard(gs, seatNumber, cardCode) {
         }
 
         // Gather sequence captures
-        const remainingCards = gs.tableCards.filter((_, i) => i !== matchIndex);
         const seqIndices = findAscendingSequence(card.value, remainingCards);
-        const capturedCards = [matchedCard, ...seqIndices.map(i => remainingCards[i])];
+        const capturedCards = [];
+        if (matchedCard) capturedCards.push(matchedCard);
+        capturedCards.push(...seqIndices.map(i => remainingCards[i]));
 
         const capturedCodes = new Set(capturedCards.map(c => c.code));
         gs.tableCards = gs.tableCards.filter(c => !capturedCodes.has(c.code));
@@ -311,7 +317,7 @@ function playCard(gs, seatNumber, cardCode) {
         gs.lastCapturer = player.seat;
 
         // Table cleared (Missa) -> 1 Bant
-        if (gs.tableCards.length === 0) {
+        if (capturedCards.length > 0 && gs.tableCards.length === 0) {
             getTeamData(gs, player.team).bant += 1;
             result.bantEarned += 1;
             result.tableCleared = true;
@@ -518,6 +524,7 @@ function getPlayerView(gs, seatNumber) {
         announcements: gs.announcements,
         announceDone: gs.announceDone || {},
         state: gs.state,
+        turnExpiresAt: gs.turnExpiresAt || null,
         deckRemaining: gs.deck.length,
         teamA: { ...gs.teamA },
         teamB: { ...gs.teamB },

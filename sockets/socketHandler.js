@@ -9,6 +9,69 @@ const rooms = new Map();
 const games = new Map();
 const playerSockets = new Map();
 const announceTimeouts = new Map();
+const turnTimeouts = new Map();
+
+function clearTurnTimer(roomCode) {
+    if (turnTimeouts.has(roomCode)) {
+        clearTimeout(turnTimeouts.get(roomCode));
+        turnTimeouts.delete(roomCode);
+    }
+}
+
+function startTurnTimer(io, roomCode) {
+    clearTurnTimer(roomCode);
+    const gs = games.get(roomCode);
+    if (!gs || gs.state !== 'active' || gs.phase !== 'active') return;
+
+    gs.turnExpiresAt = Date.now() + 15000;
+
+    const timeout = setTimeout(() => {
+        const currentGs = games.get(roomCode);
+        if (currentGs && currentGs.state === 'active' && currentGs.phase === 'active') {
+            const currentSeat = currentGs.players[currentGs.currentPlayerIndex].seat;
+            const player = currentGs.players.find(p => p.seat === currentSeat);
+            if (player && player.hand.length > 0) {
+                const randomCardCode = player.hand[Math.floor(Math.random() * player.hand.length)].code;
+                const result = engine.playCard(currentGs, player.seat, randomCardCode);
+
+                if (result.success) {
+                    if (result.events && result.events.length > 0) {
+                        io.to(roomCode).emit('game-events', {
+                            player: result.playedBy.username,
+                            card: result.card,
+                            events: result.events,
+                            captured: result.captured,
+                            bantEarned: result.bantEarned,
+                            hbalEarned: result.hbalEarned,
+                            seat: result.playedBy.seat
+                        });
+                    }
+                    io.to(roomCode).emit('chat-message', {
+                        username: 'SYSTEM',
+                        text: `${player.username} played a card automatically (timeout).`,
+                        team: 'SYSTEM'
+                    });
+
+                    // Start next timer
+                    if (currentGs.state === 'active') {
+                        if (currentGs.phase === 'announcing') {
+                            startAnnounceTimer(io, roomCode);
+                        } else {
+                            startTurnTimer(io, roomCode);
+                        }
+                    } else {
+                        clearTurnTimer(roomCode);
+                    }
+
+                    broadcastGameState(io, roomCode);
+                    persistState(roomCode);
+                }
+            }
+        }
+        turnTimeouts.delete(roomCode);
+    }, 15000);
+    turnTimeouts.set(roomCode, timeout);
+}
 
 let GameStateModel = null;
 try {
@@ -116,13 +179,24 @@ function setupSocketHandlers(io) {
                     events: result.events,
                     captured: result.captured,
                     bantEarned: result.bantEarned,
-                    hbalEarned: result.hbalEarned
+                    hbalEarned: result.hbalEarned,
+                    seat: result.playedBy.seat
                 });
             }
 
             broadcastGameState(io, info.roomCode);
             persistState(info.roomCode);
             callback({ success: true });
+
+            if (gs.state === 'active') {
+                if (gs.phase === 'announcing') {
+                    startAnnounceTimer(io, info.roomCode);
+                } else {
+                    startTurnTimer(io, info.roomCode);
+                }
+            } else {
+                clearTurnTimer(info.roomCode);
+            }
         });
 
         // ─── CLAIM DFU3 ─────────────────────────────
@@ -241,6 +315,7 @@ function startAnnounceTimer(io, roomCode) {
         const gs = games.get(roomCode);
         if (gs && gs.phase === 'announcing') {
             engine.forceSkipAnnouncing(gs);
+            startTurnTimer(io, roomCode);
             broadcastGameState(io, roomCode);
             io.to(roomCode).emit('chat-message', {
                 username: 'SYSTEM',
@@ -265,6 +340,7 @@ function checkAnnouncementPhase(io, roomCode) {
     if (gs.phase === 'active' && announceTimeouts.has(roomCode)) {
         clearTimeout(announceTimeouts.get(roomCode));
         announceTimeouts.delete(roomCode);
+        startTurnTimer(io, roomCode);
     }
 }
 

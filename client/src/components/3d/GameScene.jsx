@@ -5,8 +5,9 @@ import Table3D from './Table3D';
 import Hand3D from './Hand3D';
 import TableCards3D from './TableCards3D';
 import Opponent3D from './Opponent3D';
+import CaptureAnimations from './CaptureAnimations';
 
-export default function GameScene({ gameState, roomInfo, onPlayCard }) {
+export default function GameScene({ gameState, roomInfo, onPlayCard, lastEvent }) {
     const mySeat = roomInfo.seat;
 
     const seatLayout = useMemo(() => {
@@ -126,8 +127,12 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
             {/* ═══ TABLE CARDS ═══ */}
             <Suspense fallback={null}>
                 <TableCards3D cards={gameState.tableCards} />
+                <CaptureAnimations
+                    lastEvent={lastEvent}
+                    oppPositions={oppPositions}
+                    seatLayout={seatLayout}
+                />
             </Suspense>
-
 
             {/* ═══ OPPONENTS ═══ */}
             {getOpp(seatLayout.left) && (

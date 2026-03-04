@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-const socket = io('https://ronda-online-production.up.railway.app', {
+const SOCKET_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? 'https://ronda-online-production.up.railway.app'
+    : 'http://localhost:3000';
+
+const socket = io(SOCKET_URL, {
     transports: ['websocket', 'polling']
 });
 

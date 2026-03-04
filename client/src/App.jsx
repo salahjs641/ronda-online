@@ -13,6 +13,7 @@ function App() {
     roomData,
     roomInfo,
     chatMessages,
+    lastEvent,
     joinRoom,
     createRoom,
     startGame,
@@ -64,6 +65,7 @@ function App() {
             gameState={gameState}
             roomInfo={roomInfo}
             onPlayCard={playCard}
+            lastEvent={lastEvent}
           />
 
           {/* HTML Overlays on top of 3D */}

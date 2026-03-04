@@ -27,6 +27,23 @@ export default function GameHUD({
     onNextRound
 }) {
     const [eventLog, setEventLog] = useState([]);
+    const [timeLeft, setTimeLeft] = useState(null);
+
+    useEffect(() => {
+        if (!gameState?.turnExpiresAt || gameState.phase !== 'active' || gameState.state !== 'active') {
+            setTimeLeft(null);
+            return;
+        }
+
+        const tick = () => {
+            const remaining = Math.max(0, Math.ceil((gameState.turnExpiresAt - Date.now()) / 1000));
+            setTimeLeft(remaining);
+        };
+
+        tick();
+        const interval = setInterval(tick, 200);
+        return () => clearInterval(interval);
+    }, [gameState?.turnExpiresAt, gameState?.phase, gameState?.state]);
 
     useEffect(() => {
         if (gameState?.lastAction) {
@@ -75,12 +92,12 @@ export default function GameHUD({
             </div>
 
             {/* Turn Indicator */}
-            {isMyTurn && <div className="turn-banner">YOUR TURN</div>}
+            {isMyTurn && <div className="turn-banner">YOUR TURN {timeLeft !== null && `(${timeLeft}s)`}</div>}
 
             {/* Opponent Turn Indicator */}
-            {!isMyTurn && gameState.state === 'active' && (
+            {!isMyTurn && gameState.state === 'active' && gameState.phase === 'active' && (
                 <div className="turn-banner minor">
-                    WAITING FOR SEAT {gameState.currentPlayerSeat}
+                    WAITING FOR SEAT {gameState.currentPlayerSeat} {timeLeft !== null && `(${timeLeft}s)`}
                 </div>
             )}
 
