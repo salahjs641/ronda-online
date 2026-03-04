@@ -35,7 +35,7 @@ function startTurnTimer(io, roomCode) {
                 const result = engine.playCard(currentGs, player.seat, randomCardCode);
 
                 if (result.success) {
-                    if (result.events && result.events.length > 0) {
+                    if (result.captured.length > 0 || (result.events && result.events.length > 0)) {
                         io.to(roomCode).emit('game-events', {
                             player: result.playedBy.username,
                             card: result.card,
@@ -172,7 +172,7 @@ function setupSocketHandlers(io) {
             if (!result.success) return callback(result);
 
             // Broadcast events (Bant, Hbal, etc.)
-            if (result.events.length > 0) {
+            if (result.captured.length > 0 || result.events.length > 0) {
                 io.to(info.roomCode).emit('game-events', {
                     player: result.playedBy.username,
                     card: result.card,
