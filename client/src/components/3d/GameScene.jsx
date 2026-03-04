@@ -23,7 +23,6 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
         && gameState.state === 'active'
         && (gameState.phase === 'active' || gameState.phase === 'chain_window');
 
-    // Opponent positions around the table
     const oppPositions = {
         left: { pos: [-3, 0, 0], rot: [0, Math.PI / 2, 0] },
         across: { pos: [0, 0, -3], rot: [0, Math.PI, 0] },
@@ -36,16 +35,15 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
             gl={{ antialias: true, alpha: false, toneMapping: 1 }}
             style={{ position: 'absolute', inset: 0, zIndex: 1 }}
         >
-            {/* ═══ CAMERA — First person, sitting at the table ═══ */}
+            {/* ═══ CAMERA ═══ */}
             <PerspectiveCamera
                 makeDefault
-                position={[0, 2.6, 3.5]}
-                rotation={[-0.4, 0, 0]}
-                fov={65}
+                position={[0, 2.8, 3.8]}
+                rotation={[-0.38, 0, 0]}
+                fov={60}
                 near={0.1}
                 far={50}
             >
-                {/* ═══ PLAYER HAND — Nested in camera to be FIXED in view ═══ */}
                 <Suspense fallback={null}>
                     <Hand3D
                         cards={gameState.myHand}
@@ -55,73 +53,169 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
                 </Suspense>
             </PerspectiveCamera>
 
-            {/* ═══ LIGHTING — Warm Moroccan Parlor (bright enough to play) ═══ */}
-            {/* Cool fill light from above */}
-            <hemisphereLight intensity={0.6} color="#b8c4e0" groundColor="#2a1a0a" />
+            {/* ═══ LIGHTING — Warm, atmospheric Moroccan parlor ═══ */}
 
-            {/* Warm ambient base — enough to see everything */}
-            <ambientLight intensity={1.2} color="#e8c99a" />
+            {/* Cool sky fill */}
+            <hemisphereLight intensity={0.5} color="#b8c4e0" groundColor="#2a1a0a" />
 
-            {/* Center overhead spotlight — warm chandelier */}
+            {/* Warm ambient base */}
+            <ambientLight intensity={1.0} color="#e8c99a" />
+
+            {/* Main overhead chandelier spotlight */}
             <spotLight
-                position={[0, 4, 0]}
-                angle={0.9}
-                penumbra={0.5}
-                intensity={25}
+                position={[0, 4.5, 0]}
+                angle={0.85}
+                penumbra={0.6}
+                intensity={22}
                 color="#ffcc66"
                 castShadow
                 shadow-bias={-0.0001}
                 shadow-mapSize={[2048, 2048]}
             />
 
-            {/* Warm table-center bounce light */}
-            <pointLight position={[0, 0.5, 0]} intensity={6} color="#ffa94d" distance={6} decay={2} />
+            {/* WARM TABLE CENTER — golden pool of light */}
+            <pointLight position={[0, 0.6, 0]} intensity={5} color="#ffa94d" distance={5} decay={2} />
 
-            {/* POV Fill — illuminate player's cards */}
-            <pointLight position={[0, 2.5, 3]} intensity={5} color="#fff5e6" distance={8} decay={2} />
+            {/* POV fill on player's cards */}
+            <pointLight position={[0, 2.5, 3.2]} intensity={4} color="#fff5e6" distance={7} decay={2} />
 
-            {/* Side fills so opponents are visible */}
-            <pointLight position={[-3, 2, 0]} intensity={3} color="#ffd699" distance={6} decay={2} />
-            <pointLight position={[3, 2, 0]} intensity={3} color="#ffd699" distance={6} decay={2} />
+            {/* Side fills for opponents */}
+            <pointLight position={[-3.5, 2.5, 0]} intensity={2.5} color="#ffd699" distance={6} decay={2} />
+            <pointLight position={[3.5, 2.5, 0]} intensity={2.5} color="#ffd699" distance={6} decay={2} />
 
-            <color attach="background" args={['#0d0906']} />
+            {/* Backlight for depth */}
+            <pointLight position={[0, 2, -4]} intensity={1.5} color="#cc8844" distance={6} decay={2} />
 
-            {/* ═══ ENVIRONMENT DETAILS ═══ */}
-            {/* Ornate Hanging Lantern */}
-            <group position={[0, 3.5, 0]}>
-                {/* Chain */}
-                <mesh position={[0, 1, 0]}>
-                    <cylinderGeometry args={[0.02, 0.02, 2]} />
-                    <meshPhysicalMaterial color="#1a1a1a" metalness={0.8} roughness={0.4} clearcoat={0.3} />
-                </mesh>
-                {/* Lantern Body */}
+            <color attach="background" args={['#0a0704']} />
+
+            {/* ═══ ENVIRONMENT ═══ */}
+
+            {/* Ornate Hanging Lantern — Moroccan pierced metal */}
+            <group position={[0, 4, 0]}>
+                {/* Chain links */}
+                {[0, 1, 2, 3].map((i) => (
+                    <mesh key={`chain-${i}`} position={[0, 0.5 + i * 0.22, 0]}>
+                        <torusGeometry args={[0.03, 0.008, 6, 12]} />
+                        <meshPhysicalMaterial color="#3a2010" metalness={0.85} roughness={0.3} />
+                    </mesh>
+                ))}
+                {/* Lantern cage — wireframe octahedron */}
                 <mesh castShadow>
-                    <octahedronGeometry args={[0.4, 0]} />
-                    <meshPhysicalMaterial color="#d4a350" metalness={0.9} roughness={0.2} wireframe clearcoat={0.5} />
+                    <octahedronGeometry args={[0.45, 0]} />
+                    <meshPhysicalMaterial
+                        color="#c49a3c"
+                        metalness={0.9}
+                        roughness={0.15}
+                        wireframe
+                        clearcoat={0.6}
+                        emissive="#8a6a1a"
+                        emissiveIntensity={0.1}
+                    />
                 </mesh>
-                {/* Internal Glow */}
+                {/* Warm internal glow orb */}
                 <mesh>
-                    <sphereGeometry args={[0.3, 16, 16]} />
-                    <meshBasicMaterial color="#ffc266" />
+                    <sphereGeometry args={[0.35, 16, 16]} />
+                    <meshBasicMaterial color="#ffc266" transparent opacity={0.6} />
+                </mesh>
+                {/* Secondary glow */}
+                <mesh>
+                    <sphereGeometry args={[0.2, 12, 12]} />
+                    <meshBasicMaterial color="#ffe0a0" />
                 </mesh>
             </group>
 
-            {/* ═══ FLOOR — Ornate tiled floor ═══ */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.62, 0]} receiveShadow>
-                <planeGeometry args={[20, 20]} />
-                <meshPhysicalMaterial color="#1f1814" roughness={0.7} metalness={0.1} clearcoat={0.3} clearcoatRoughness={0.2} />
-                {/* Outer Rug */}
-                <mesh position={[0, 0, 0.01]} receiveShadow>
-                    <planeGeometry args={[7, 7]} />
-                    <meshPhysicalMaterial color="#551d1a" roughness={0.9} clearcoat={0.1} clearcoatRoughness={0.9} />
+            {/* Side wall lanterns */}
+            {[-1, 1].map((side) => (
+                <group key={`lantern-${side}`} position={[side * 5, 3, -2]}>
+                    <mesh>
+                        <octahedronGeometry args={[0.2, 0]} />
+                        <meshPhysicalMaterial color="#c49a3c" metalness={0.9} roughness={0.15} wireframe />
+                    </mesh>
+                    <mesh>
+                        <sphereGeometry args={[0.15, 10, 10]} />
+                        <meshBasicMaterial color="#ffcc66" transparent opacity={0.4} />
+                    </mesh>
+                    <pointLight position={[0, 0, 0]} intensity={1} color="#ffa040" distance={4} decay={2} />
+                </group>
+            ))}
+
+            {/* ═══ FLOOR — Ornate Moroccan tiles with rug ═══ */}
+            <group>
+                {/* Main floor */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.62, 0]} receiveShadow>
+                    <planeGeometry args={[20, 20]} />
+                    <meshPhysicalMaterial
+                        color="#1a1410"
+                        roughness={0.6}
+                        metalness={0.12}
+                        clearcoat={0.35}
+                        clearcoatRoughness={0.2}
+                    />
                 </mesh>
+                {/* Decorative rug — outer border */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.615, 0]} receiveShadow>
+                    <planeGeometry args={[7.5, 7.5]} />
+                    <meshPhysicalMaterial
+                        color="#4a1a12"
+                        roughness={0.92}
+                        clearcoat={0.08}
+                    />
+                </mesh>
+                {/* Inner rug pattern */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.61, 0]}>
+                    <planeGeometry args={[6.5, 6.5]} />
+                    <meshPhysicalMaterial
+                        color="#5a2218"
+                        roughness={0.95}
+                        clearcoat={0.05}
+                    />
+                </mesh>
+                {/* Center medallion */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.605, 0]}>
+                    <circleGeometry args={[2.5, 48]} />
+                    <meshPhysicalMaterial
+                        color="#3a1510"
+                        roughness={0.95}
+                    />
+                </mesh>
+            </group>
+
+            {/* ═══ WALLS — Curved Moroccan-style alcove ═══ */}
+            <mesh position={[0, 2.5, 0]} receiveShadow>
+                <cylinderGeometry args={[9, 9, 9, 48, 1, true, -Math.PI / 1.5, Math.PI * 1.35]} />
+                <meshPhysicalMaterial
+                    color="#25140c"
+                    roughness={0.75}
+                    clearcoat={0.12}
+                    clearcoatRoughness={0.5}
+                    side={2}
+                />
             </mesh>
 
-            {/* ═══ SURROUNDING WALLS — Curved Alcove ═══ */}
-            <mesh position={[0, 2, 0]} receiveShadow>
-                <cylinderGeometry args={[8, 8, 8, 32, 1, true, -Math.PI / 1.5, Math.PI * 1.3]} />
-                <meshPhysicalMaterial color="#2d1712" roughness={0.8} clearcoat={0.1} clearcoatRoughness={0.6} side={2} />
+            {/* Ceiling */}
+            <mesh position={[0, 6.5, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+                <circleGeometry args={[9, 48]} />
+                <meshPhysicalMaterial color="#1a0e08" roughness={0.9} side={2} />
             </mesh>
+
+            {/* Decorative arched wall niches */}
+            {[-1, 0, 1].map((i) => (
+                <group key={`niche-${i}`} position={[i * 3.5, 2.5, -7]} rotation={[0, i * 0.15, 0]}>
+                    <mesh>
+                        <boxGeometry args={[1.2, 2, 0.15]} />
+                        <meshPhysicalMaterial
+                            color="#1e100a"
+                            roughness={0.85}
+                            clearcoat={0.1}
+                        />
+                    </mesh>
+                    {/* Arch top */}
+                    <mesh position={[0, 1.0, 0]}>
+                        <sphereGeometry args={[0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                        <meshPhysicalMaterial color="#1e100a" roughness={0.85} />
+                    </mesh>
+                </group>
+            ))}
 
             {/* ═══ TABLE ═══ */}
             <Suspense fallback={null}>

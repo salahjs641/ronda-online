@@ -4,31 +4,50 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 const CONFIGS = {
-    1: { bodyColor: '#c9a84c', headColor: '#2c1a10', icon: '👑', name: 'Sultan' },
-    2: { bodyColor: '#1b6d46', headColor: '#0a2a12', icon: '🏺', name: 'Merchant' },
-    3: { bodyColor: '#8a2020', headColor: '#3a0a0a', icon: '⚔️', name: 'Berber' },
-    4: { bodyColor: '#2a5aab', headColor: '#142a5b', icon: '📜', name: 'Scholar' },
+    1: {
+        robeColor: '#d4af37', robeAccent: '#b8941e', skinColor: '#c68642',
+        turbanColor: '#f5f0e0', icon: '👑', name: 'Sultan', headwear: 'turban'
+    },
+    2: {
+        robeColor: '#1a6b47', robeAccent: '#0f4f32', skinColor: '#a0714a',
+        turbanColor: '#8b1a1a', icon: '🏺', name: 'Merchant', headwear: 'fez'
+    },
+    3: {
+        robeColor: '#6b1a1a', robeAccent: '#4a0e0e', skinColor: '#8d5524',
+        turbanColor: '#d8cfc0', icon: '⚔️', name: 'Warrior', headwear: 'turban'
+    },
+    4: {
+        robeColor: '#2a4a8a', robeAccent: '#1a3060', skinColor: '#b57840',
+        turbanColor: '#8b1a1a', icon: '📜', name: 'Scholar', headwear: 'fez'
+    },
 };
 
 export default function Opponent3D({ seat, position, rotation, username, team, isActive, handCount = 0 }) {
     const groupRef = useRef();
     const headRef = useRef();
+    const breathRef = useRef();
     const config = CONFIGS[seat] || CONFIGS[1];
 
-    // Idle breathing + active bounce
     useFrame((state) => {
         if (!groupRef.current) return;
         const t = state.clock.elapsedTime;
 
-        // Breathing
-        if (headRef.current) {
-            headRef.current.position.y = 1.55 + Math.sin(t * 1.2 + seat) * 0.015;
-            headRef.current.rotation.y = Math.sin(t * 0.4 + seat * 2) * 0.06;
+        // Breathing sway
+        if (breathRef.current) {
+            breathRef.current.scale.x = 1 + Math.sin(t * 1.0 + seat) * 0.008;
+            breathRef.current.scale.z = 1 + Math.sin(t * 1.0 + seat + 0.5) * 0.008;
         }
 
-        // Active glow
+        // Head bob + idle look
+        if (headRef.current) {
+            headRef.current.position.y = 1.52 + Math.sin(t * 1.1 + seat) * 0.012;
+            headRef.current.rotation.y = Math.sin(t * 0.35 + seat * 1.5) * 0.05;
+            headRef.current.rotation.z = Math.sin(t * 0.5 + seat) * 0.015;
+        }
+
+        // Active bounce
         if (isActive) {
-            groupRef.current.position.y = position[1] + Math.sin(t * 3) * 0.02;
+            groupRef.current.position.y = position[1] + Math.sin(t * 2.5) * 0.015;
         } else {
             groupRef.current.position.y = position[1];
         }
@@ -36,210 +55,398 @@ export default function Opponent3D({ seat, position, rotation, username, team, i
 
     return (
         <group ref={groupRef} position={position} rotation={rotation || [0, 0, 0]}>
-            {/* --- TORSO & DJELLABA (Traditional Robe) --- */}
-            <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
-                {/* A wider, flowing bottom that tapers to the shoulders */}
-                <cylinderGeometry args={[0.26, 0.42, 1.1, 32]} />
+
+            {/* ═══ LOWER ROBE — Flowing djellaba skirt ═══ */}
+            <mesh ref={breathRef} position={[0, 0.35, 0]} castShadow receiveShadow>
+                <cylinderGeometry args={[0.3, 0.48, 0.8, 24]} />
                 <meshPhysicalMaterial
-                    color={config.bodyColor}
-                    roughness={0.9}
-                    metalness={0.0}
-                    clearcoat={0.1}
-                    clearcoatRoughness={0.8}
+                    color={config.robeColor}
+                    roughness={0.85}
+                    metalness={0.02}
+                    clearcoat={0.15}
+                    clearcoatRoughness={0.7}
                 />
             </mesh>
 
-            {/* --- SHOULDERS & UPPER CHEST --- */}
-            <mesh position={[0, 1.08, 0]} castShadow receiveShadow>
-                <capsuleGeometry args={[0.25, 0.45, 16, 32]} rotation={[0, 0, Math.PI / 2]} />
+            {/* ═══ ROBE BELT / SASH ═══ */}
+            <mesh position={[0, 0.75, 0]} castShadow>
+                <torusGeometry args={[0.28, 0.025, 8, 32]} />
                 <meshPhysicalMaterial
-                    color={config.bodyColor}
-                    roughness={0.9}
-                    metalness={0.0}
-                    clearcoat={0.1}
-                    clearcoatRoughness={0.8}
+                    color="#c49a3c"
+                    metalness={0.85}
+                    roughness={0.15}
+                    clearcoat={0.8}
+                    emissive="#8a6a1a"
+                    emissiveIntensity={0.1}
                 />
             </mesh>
 
-            {/* --- LEFT ARM (Sleeve) --- */}
-            <group position={[-0.38, 1.0, 0]} rotation={[0, 0.1, 0.3]}>
-                <mesh position={[0, -0.35, 0]} castShadow receiveShadow>
-                    <cylinderGeometry args={[0.08, 0.14, 0.7, 16]} />
-                    <meshPhysicalMaterial color={config.bodyColor} roughness={0.9} metalness={0.0} clearcoat={0.1} clearcoatRoughness={0.8} />
-                </mesh>
-                {/* Hand emerging from sleeve */}
-                <mesh position={[0, -0.75, 0]} castShadow receiveShadow>
-                    <boxGeometry args={[0.08, 0.12, 0.05]} />
-                    <meshPhysicalMaterial color={config.headColor} roughness={0.4} metalness={0.1} clearcoat={0.2} clearcoatRoughness={0.3} emissive={config.headColor} emissiveIntensity={0.05} />
-                </mesh>
-            </group>
-
-            {/* --- RIGHT ARM (Sleeve) --- */}
-            <group position={[0.38, 1.0, 0]} rotation={[0, -0.1, -0.3]}>
-                <mesh position={[0, -0.35, 0]} castShadow receiveShadow>
-                    <cylinderGeometry args={[0.08, 0.14, 0.7, 16]} />
-                    <meshPhysicalMaterial color={config.bodyColor} roughness={0.9} metalness={0.0} clearcoat={0.1} clearcoatRoughness={0.8} />
-                </mesh>
-                {/* Hand sitting on table */}
-                <mesh position={[0, -0.75, 0.05]} rotation={[-0.2, 0, 0]} castShadow receiveShadow>
-                    <boxGeometry args={[0.08, 0.12, 0.05]} />
-                    <meshPhysicalMaterial color={config.headColor} roughness={0.4} metalness={0.1} clearcoat={0.2} clearcoatRoughness={0.3} emissive={config.headColor} emissiveIntensity={0.05} />
-                </mesh>
-            </group>
-
-            {/* --- NECK --- */}
-            <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
-                <cylinderGeometry args={[0.07, 0.09, 0.15, 16]} />
-                <meshPhysicalMaterial color={config.headColor} roughness={0.4} metalness={0.1} clearcoat={0.2} clearcoatRoughness={0.3} emissive={config.headColor} emissiveIntensity={0.05} />
+            {/* ═══ UPPER TORSO — Fitted robe top ═══ */}
+            <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
+                <cylinderGeometry args={[0.28, 0.30, 0.5, 24]} />
+                <meshPhysicalMaterial
+                    color={config.robeAccent}
+                    roughness={0.82}
+                    metalness={0.02}
+                    clearcoat={0.15}
+                    clearcoatRoughness={0.7}
+                />
             </mesh>
 
-            {/* --- HEAD & FACE --- */}
+            {/* ═══ SHOULDERS — Broad shape ═══ */}
+            <mesh position={[0, 1.12, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+                <capsuleGeometry args={[0.14, 0.42, 12, 24]} />
+                <meshPhysicalMaterial
+                    color={config.robeColor}
+                    roughness={0.85}
+                    metalness={0.02}
+                    clearcoat={0.15}
+                    clearcoatRoughness={0.7}
+                />
+            </mesh>
+
+            {/* ═══ COLLAR / NECKLINE — V-shaped decorative ═══ */}
+            <mesh position={[0, 1.18, 0.12]} rotation={[0.3, 0, 0]} castShadow>
+                <boxGeometry args={[0.12, 0.08, 0.02]} />
+                <meshPhysicalMaterial
+                    color="#dab254"
+                    metalness={0.8}
+                    roughness={0.2}
+                    clearcoat={0.7}
+                    emissive="#8a6a1a"
+                    emissiveIntensity={0.08}
+                />
+            </mesh>
+
+            {/* ═══ LEFT ARM ═══ */}
+            <group position={[-0.36, 1.05, 0]} rotation={[0.15, 0.1, 0.35]}>
+                {/* Upper sleeve */}
+                <mesh position={[0, -0.2, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.09, 0.12, 0.4, 12]} />
+                    <meshPhysicalMaterial color={config.robeColor} roughness={0.85} clearcoat={0.15} />
+                </mesh>
+                {/* Forearm / wider sleeve opening */}
+                <mesh position={[0, -0.5, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.06, 0.14, 0.35, 12]} />
+                    <meshPhysicalMaterial color={config.robeAccent} roughness={0.85} clearcoat={0.15} />
+                </mesh>
+                {/* Hand */}
+                <mesh position={[0, -0.72, 0]} castShadow>
+                    <sphereGeometry args={[0.045, 12, 10]} />
+                    <meshPhysicalMaterial
+                        color={config.skinColor}
+                        roughness={0.55}
+                        metalness={0.05}
+                        clearcoat={0.25}
+                        clearcoatRoughness={0.3}
+                    />
+                </mesh>
+            </group>
+
+            {/* ═══ RIGHT ARM ═══ */}
+            <group position={[0.36, 1.05, 0]} rotation={[0.15, -0.1, -0.35]}>
+                <mesh position={[0, -0.2, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.09, 0.12, 0.4, 12]} />
+                    <meshPhysicalMaterial color={config.robeColor} roughness={0.85} clearcoat={0.15} />
+                </mesh>
+                <mesh position={[0, -0.5, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.06, 0.14, 0.35, 12]} />
+                    <meshPhysicalMaterial color={config.robeAccent} roughness={0.85} clearcoat={0.15} />
+                </mesh>
+                <mesh position={[0, -0.72, 0.06]} rotation={[-0.3, 0, 0]} castShadow>
+                    <sphereGeometry args={[0.045, 12, 10]} />
+                    <meshPhysicalMaterial
+                        color={config.skinColor}
+                        roughness={0.55}
+                        metalness={0.05}
+                        clearcoat={0.25}
+                        clearcoatRoughness={0.3}
+                    />
+                </mesh>
+            </group>
+
+            {/* ═══ NECK ═══ */}
+            <mesh position={[0, 1.28, 0]} castShadow>
+                <cylinderGeometry args={[0.065, 0.08, 0.12, 16]} />
+                <meshPhysicalMaterial
+                    color={config.skinColor}
+                    roughness={0.5}
+                    metalness={0.05}
+                    clearcoat={0.3}
+                    clearcoatRoughness={0.25}
+                />
+            </mesh>
+
+            {/* ═══ HEAD & FACE ═══ */}
             <group ref={headRef} position={[0, 1.45, 0]}>
-                {/* Main Head Base */}
+                {/* Skull */}
                 <mesh castShadow receiveShadow>
-                    <sphereGeometry args={[0.18, 32, 32]} />
-                    <meshPhysicalMaterial color={config.headColor} roughness={0.4} metalness={0.1} clearcoat={0.3} clearcoatRoughness={0.2} emissive={config.headColor} emissiveIntensity={0.05} />
+                    <sphereGeometry args={[0.17, 32, 24]} />
+                    <meshPhysicalMaterial
+                        color={config.skinColor}
+                        roughness={0.5}
+                        metalness={0.05}
+                        clearcoat={0.35}
+                        clearcoatRoughness={0.2}
+                    />
                 </mesh>
 
-                {/* Brow Ridge */}
-                <mesh position={[0, 0.05, 0.14]} castShadow renderOrder={2}>
-                    <capsuleGeometry args={[0.03, 0.15, 8, 16]} rotation={[0, 0, Math.PI / 2]} />
-                    <meshPhysicalMaterial color={config.headColor} roughness={0.4} clearcoat={0.3} clearcoatRoughness={0.2} />
+                {/* Jaw / chin structure */}
+                <mesh position={[0, -0.08, 0.04]} castShadow>
+                    <boxGeometry args={[0.14, 0.08, 0.12]} />
+                    <meshPhysicalMaterial
+                        color={config.skinColor}
+                        roughness={0.5}
+                        clearcoat={0.3}
+                    />
+                </mesh>
+
+                {/* Ears */}
+                {[-1, 1].map((side) => (
+                    <mesh key={`ear-${side}`} position={[side * 0.17, 0, 0]} castShadow>
+                        <sphereGeometry args={[0.035, 8, 6]} />
+                        <meshPhysicalMaterial color={config.skinColor} roughness={0.5} clearcoat={0.3} />
+                    </mesh>
+                ))}
+
+                {/* Brow ridge */}
+                <mesh position={[0, 0.055, 0.145]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                    <capsuleGeometry args={[0.022, 0.11, 8, 12]} />
+                    <meshPhysicalMaterial color={config.skinColor} roughness={0.5} clearcoat={0.3} />
                 </mesh>
 
                 {/* Nose */}
-                <mesh position={[0, -0.01, 0.18]} rotation={[0.4, 0, 0]} castShadow renderOrder={2}>
-                    <coneGeometry args={[0.03, 0.08, 16]} />
-                    <meshPhysicalMaterial color={config.headColor} roughness={0.3} metalness={0.1} clearcoat={0.4} clearcoatRoughness={0.1} />
+                <mesh position={[0, -0.01, 0.17]} rotation={[0.3, 0, 0]} castShadow>
+                    <coneGeometry args={[0.025, 0.07, 12]} />
+                    <meshPhysicalMaterial color={config.skinColor} roughness={0.45} clearcoat={0.4} />
                 </mesh>
 
-                {/* Thick Traditional Beard */}
-                <mesh position={[0, -0.12, 0.12]} castShadow receiveShadow>
-                    <sphereGeometry args={[0.13, 16, 16]} />
-                    <meshPhysicalMaterial color="#111111" roughness={0.9} metalness={0.0} clearcoat={0.05} clearcoatRoughness={1.0} />
-                </mesh>
-                {/* Mustache overlapping beard */}
-                <mesh position={[0, -0.05, 0.18]} castShadow>
-                    <capsuleGeometry args={[0.02, 0.1, 8, 16]} rotation={[0, 0, Math.PI / 2]} />
-                    <meshPhysicalMaterial color="#111111" roughness={0.9} />
-                </mesh>
-
-                {/* Eyes - Deep-set and highly realistic glow logic */}
-                <mesh position={[-0.07, 0.03, 0.14]}>
-                    <sphereGeometry args={[0.015, 16, 16]} />
-                    <meshPhysicalMaterial
-                        color={isActive ? '#ffe499' : '#1a1a1a'}
-                        emissive={isActive ? '#d9a02e' : '#000000'}
-                        emissiveIntensity={isActive ? 2.5 : 0}
-                        roughness={0.1}
-                        clearcoat={1.0}
-                        clearcoatRoughness={0.0}
-                    />
-                </mesh>
-                <mesh position={[0.07, 0.03, 0.14]}>
-                    <sphereGeometry args={[0.015, 16, 16]} />
-                    <meshPhysicalMaterial
-                        color={isActive ? '#ffe499' : '#1a1a1a'}
-                        emissive={isActive ? '#d9a02e' : '#000000'}
-                        emissiveIntensity={isActive ? 2.5 : 0}
-                        roughness={0.1}
-                        clearcoat={1.0}
-                        clearcoatRoughness={0.0}
-                    />
-                </mesh>
-
-                {/* --- HEADWEAR --- */}
-                {/* Turban Wrap / Tarbouche depending on seat */}
-                {seat === 1 || seat === 3 ? (
-                    // Turban for Seats 1 & 3
-                    <group position={[0, 0.12, 0]} rotation={[-0.1, 0, 0]}>
-                        <mesh castShadow receiveShadow>
-                            {/* Base wrap */}
-                            <torusGeometry args={[0.17, 0.07, 16, 64]} />
-                            <meshPhysicalMaterial color="#e6dfcc" roughness={0.9} clearcoat={0.1} clearcoatRoughness={0.9} />
+                {/* Eyes — glow when active */}
+                {[-0.065, 0.065].map((x, idx) => (
+                    <group key={`eye-${idx}`} position={[x, 0.035, 0.145]}>
+                        {/* White of eye */}
+                        <mesh>
+                            <sphereGeometry args={[0.02, 12, 10]} />
+                            <meshPhysicalMaterial
+                                color="#f0f0f0"
+                                roughness={0.1}
+                                clearcoat={1.0}
+                            />
                         </mesh>
-                        <mesh position={[0, 0.05, 0]} rotation={[0.2, 0, 0.1]} castShadow receiveShadow>
-                            {/* Layered wrap */}
-                            <torusGeometry args={[0.15, 0.06, 16, 64]} />
-                            <meshPhysicalMaterial color="#d4cbb8" roughness={0.9} clearcoat={0.1} clearcoatRoughness={0.9} />
+                        {/* Iris */}
+                        <mesh position={[0, 0, 0.01]}>
+                            <sphereGeometry args={[0.012, 10, 8]} />
+                            <meshPhysicalMaterial
+                                color={isActive ? '#d9a02e' : '#2a1a0a'}
+                                emissive={isActive ? '#ffcc44' : '#000000'}
+                                emissiveIntensity={isActive ? 3.0 : 0}
+                                roughness={0.05}
+                                clearcoat={1.0}
+                            />
+                        </mesh>
+                        {/* Pupil */}
+                        <mesh position={[0, 0, 0.018]}>
+                            <sphereGeometry args={[0.006, 8, 6]} />
+                            <meshPhysicalMaterial color="#000000" roughness={0.1} clearcoat={1.0} />
+                        </mesh>
+                    </group>
+                ))}
+
+                {/* Thick beard */}
+                <mesh position={[0, -0.12, 0.1]} castShadow>
+                    <sphereGeometry args={[0.12, 16, 12]} />
+                    <meshPhysicalMaterial
+                        color="#1a1008"
+                        roughness={0.95}
+                        metalness={0}
+                        clearcoat={0.05}
+                    />
+                </mesh>
+
+                {/* Mustache */}
+                <mesh position={[0, -0.04, 0.16]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                    <capsuleGeometry args={[0.018, 0.08, 6, 12]} />
+                    <meshPhysicalMaterial color="#1a1008" roughness={0.95} />
+                </mesh>
+
+                {/* ═══ HEADWEAR ═══ */}
+                {config.headwear === 'turban' ? (
+                    <group position={[0, 0.12, 0]} rotation={[-0.08, 0, 0]}>
+                        {/* Base wrap */}
+                        <mesh castShadow receiveShadow>
+                            <torusGeometry args={[0.16, 0.065, 16, 48]} />
+                            <meshPhysicalMaterial
+                                color={config.turbanColor}
+                                roughness={0.88}
+                                clearcoat={0.1}
+                            />
+                        </mesh>
+                        {/* Second layer */}
+                        <mesh position={[0, 0.05, 0]} rotation={[0.15, 0.3, 0.08]} castShadow>
+                            <torusGeometry args={[0.14, 0.055, 16, 48]} />
+                            <meshPhysicalMaterial
+                                color={config.turbanColor}
+                                roughness={0.88}
+                                clearcoat={0.1}
+                            />
+                        </mesh>
+                        {/* Top knot */}
+                        <mesh position={[0, 0.09, 0]} castShadow>
+                            <sphereGeometry args={[0.06, 12, 10]} />
+                            <meshPhysicalMaterial
+                                color={config.turbanColor}
+                                roughness={0.88}
+                            />
+                        </mesh>
+                        {/* Gold brooch on turban */}
+                        <mesh position={[0, 0.05, 0.15]} castShadow>
+                            <octahedronGeometry args={[0.025, 0]} />
+                            <meshPhysicalMaterial
+                                color="#d4af37"
+                                metalness={0.95}
+                                roughness={0.08}
+                                clearcoat={1.0}
+                                emissive="#b08820"
+                                emissiveIntensity={0.2}
+                            />
                         </mesh>
                     </group>
                 ) : (
-                    // Fez / Tarbouche for Seats 2 & 4
-                    <group position={[0, 0.15, -0.04]} rotation={[-0.2, 0, 0]}>
+                    <group position={[0, 0.14, -0.03]} rotation={[-0.15, 0, 0]}>
+                        {/* Fez body */}
                         <mesh castShadow receiveShadow>
-                            <cylinderGeometry args={[0.14, 0.16, 0.25, 32]} />
-                            <meshPhysicalMaterial color="#8a1c1c" roughness={0.8} clearcoat={0.2} clearcoatRoughness={0.5} />
+                            <cylinderGeometry args={[0.12, 0.145, 0.22, 24]} />
+                            <meshPhysicalMaterial
+                                color={config.turbanColor}
+                                roughness={0.75}
+                                clearcoat={0.25}
+                                clearcoatRoughness={0.4}
+                            />
                         </mesh>
-                        {/* Fez Tassel */}
-                        <mesh position={[0, 0.12, 0]} castShadow>
-                            <cylinderGeometry args={[0.005, 0.005, 0.05]} />
-                            <meshPhysicalMaterial color="#000000" roughness={0.8} />
+                        {/* Flat top */}
+                        <mesh position={[0, 0.11, 0]} rotation={[0, 0, 0]} castShadow>
+                            <cylinderGeometry args={[0.12, 0.12, 0.01, 24]} />
+                            <meshPhysicalMaterial color={config.turbanColor} roughness={0.75} clearcoat={0.25} />
                         </mesh>
-                        <mesh position={[0.04, 0.05, 0]} rotation={[0, 0, -0.4]} castShadow>
-                            <cylinderGeometry args={[0.01, 0.015, 0.15, 8]} />
-                            <meshPhysicalMaterial color="#000000" roughness={0.8} />
+                        {/* Tassel anchor */}
+                        <mesh position={[0, 0.11, 0]} castShadow>
+                            <sphereGeometry args={[0.015, 8, 6]} />
+                            <meshPhysicalMaterial color="#111" roughness={0.8} />
+                        </mesh>
+                        {/* Tassel string */}
+                        <mesh position={[0.06, 0.06, 0]} rotation={[0, 0, -0.5]} castShadow>
+                            <cylinderGeometry args={[0.006, 0.008, 0.14, 6]} />
+                            <meshPhysicalMaterial color="#111" roughness={0.8} />
+                        </mesh>
+                        {/* Tassel tuft */}
+                        <mesh position={[0.1, 0, 0]} castShadow>
+                            <sphereGeometry args={[0.02, 8, 6]} />
+                            <meshPhysicalMaterial color="#111" roughness={0.9} />
                         </mesh>
                     </group>
                 )}
             </group>
 
-            {/* Active turn indicator - Deep ornate glowing ring on table */}
+            {/* ═══ ACTIVE TURN INDICATOR — Golden aura ring ═══ */}
             {isActive && (
                 <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                    <ringGeometry args={[0.35, 0.5, 32]} />
-                    <meshBasicMaterial color="#c9a84c" transparent opacity={0.3} side={THREE.DoubleSide} />
+                    <ringGeometry args={[0.4, 0.55, 48]} />
+                    <meshBasicMaterial
+                        color="#d4af37"
+                        transparent
+                        opacity={0.35}
+                        side={THREE.DoubleSide}
+                    />
                 </mesh>
             )}
 
-            {/* Face-down cards in front of character */}
+            {/* ═══ FACE-DOWN CARDS in front ═══ */}
             {Array.from({ length: handCount }).map((_, i) => (
                 <mesh
                     key={i}
-                    position={[(i - (handCount - 1) / 2) * 0.12, 0.16, 0.6 + i * 0.005]}
-                    rotation={[-Math.PI / 2, 0, (i - (handCount - 1) / 2) * 0.08]}
+                    position={[(i - (handCount - 1) / 2) * 0.13, 0.16, 0.65 + i * 0.004]}
+                    rotation={[-Math.PI / 2, 0, (i - (handCount - 1) / 2) * 0.07]}
                     castShadow
                 >
-                    <planeGeometry args={[0.25, 0.36]} />
-                    <meshStandardMaterial color="#3a0808" roughness={0.8} />
+                    <planeGeometry args={[0.22, 0.33]} />
+                    <meshPhysicalMaterial
+                        color="#4a0a0a"
+                        roughness={0.7}
+                        metalness={0.05}
+                        clearcoat={0.3}
+                    />
                 </mesh>
             ))}
 
-            {/* Name label */}
-            <Html position={[0, 2.0, 0]} center style={{ pointerEvents: 'none' }}>
+            {/* ═══ NAME LABEL ═══ */}
+            <Html position={[0, 2.05, 0]} center style={{ pointerEvents: 'none' }}>
                 <div style={{
-                    background: 'rgba(10, 15, 12, 0.9)',
-                    border: `1px solid ${config.bodyColor}`,
-                    borderRadius: '12px',
-                    padding: '3px 12px',
+                    background: isActive
+                        ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(10, 15, 12, 0.9))'
+                        : 'rgba(10, 15, 12, 0.88)',
+                    border: `1px solid ${isActive ? '#d4af37' : config.robeColor + '80'}`,
+                    borderRadius: '16px',
+                    padding: '4px 14px',
                     fontSize: '10px',
                     fontWeight: 700,
-                    color: config.bodyColor,
+                    color: isActive ? '#ffd700' : config.robeColor,
                     fontFamily: 'Outfit, sans-serif',
                     textTransform: 'uppercase',
-                    letterSpacing: '1.5px',
+                    letterSpacing: '2px',
                     whiteSpace: 'nowrap',
                     textAlign: 'center',
-                    backdropFilter: 'blur(4px)',
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: isActive
+                        ? '0 0 20px rgba(212, 175, 55, 0.3)'
+                        : '0 4px 12px rgba(0,0,0,0.5)',
+                    transition: 'all 0.4s ease',
                 }}>
                     {username || config.name}
-                    <span style={{ marginLeft: 6, opacity: 0.5, fontSize: '8px' }}>
+                    <span style={{
+                        marginLeft: 8,
+                        fontSize: '9px',
+                        opacity: 0.6,
+                    }}>
                         {team === 'A' ? '🔵' : '🟠'}
                     </span>
                 </div>
             </Html>
 
-            {/* Tea glass */}
-            <group position={[0.5, 0.15, 0.4]}>
-                {/* Glass */}
+            {/* ═══ MOROCCAN TEA GLASS ═══ */}
+            <group position={[0.55, 0.13, 0.35]}>
+                {/* Glass body — ornate */}
                 <mesh>
-                    <cylinderGeometry args={[0.04, 0.05, 0.12, 8]} />
-                    <meshStandardMaterial color="#7ab848" transparent opacity={0.5} roughness={0.2} metalness={0.3} />
+                    <cylinderGeometry args={[0.03, 0.045, 0.1, 12]} />
+                    <meshPhysicalMaterial
+                        color="#d4af37"
+                        metalness={0.6}
+                        roughness={0.15}
+                        clearcoat={0.9}
+                        transparent
+                        opacity={0.7}
+                    />
                 </mesh>
-                {/* Tea */}
-                <mesh position={[0, 0.03, 0]}>
-                    <cylinderGeometry args={[0.035, 0.035, 0.04, 8]} />
-                    <meshStandardMaterial color="#4a8020" roughness={0.6} />
+                {/* Tea liquid */}
+                <mesh position={[0, 0.02, 0]}>
+                    <cylinderGeometry args={[0.025, 0.03, 0.04, 12]} />
+                    <meshPhysicalMaterial
+                        color="#8b5e2a"
+                        roughness={0.3}
+                        clearcoat={0.5}
+                        transparent
+                        opacity={0.8}
+                    />
+                </mesh>
+                {/* Gold rim band */}
+                <mesh position={[0, 0.05, 0]}>
+                    <torusGeometry args={[0.030, 0.004, 6, 16]} />
+                    <meshPhysicalMaterial
+                        color="#d4af37"
+                        metalness={0.9}
+                        roughness={0.1}
+                        emissive="#8a6a1a"
+                        emissiveIntensity={0.1}
+                    />
                 </mesh>
             </group>
         </group>
