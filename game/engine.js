@@ -249,6 +249,9 @@ function playCard(gs, seatNumber, cardCode) {
 
     const card = player.hand.splice(cardIndex, 1)[0];
 
+    // Clear previous capture before processing
+    gs.lastCapture = null;
+
     const result = {
         success: true, card,
         playedBy: { seat: player.seat, username: player.username, team: player.team },
@@ -315,6 +318,14 @@ function playCard(gs, seatNumber, cardCode) {
         player.capturedCards.push(card, ...capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })));
         result.captured = capturedCards;
         gs.lastCapturer = player.seat;
+
+        // Store capture info in game state for reliable client delivery
+        gs.lastCapture = {
+            card: { suit: card.suit, value: card.value, code: card.code },
+            captured: capturedCards.map(c => ({ suit: c.suit, value: c.value, code: c.code })),
+            seat: player.seat,
+            timestamp: Date.now()
+        };
 
         // Table cleared (Missa) -> 1 Bant
         if (capturedCards.length > 0 && gs.tableCards.length === 0) {
@@ -530,6 +541,7 @@ function getPlayerView(gs, seatNumber) {
         teamB: { ...gs.teamB },
         winner: gs.winner,
         lastAction: gs.lastAction,
+        lastCapture: gs.lastCapture || null,
         cardCount: gs.cardCount,
         opponents: gs.players
             .filter(p => p.seat !== seatNumber)

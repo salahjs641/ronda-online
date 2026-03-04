@@ -7,7 +7,7 @@ import TableCards3D from './TableCards3D';
 import Opponent3D from './Opponent3D';
 import CaptureAnimations from './CaptureAnimations';
 
-export default function GameScene({ gameState, roomInfo, onPlayCard, lastEvent }) {
+export default function GameScene({ gameState, roomInfo, onPlayCard }) {
     const mySeat = roomInfo.seat;
 
     const seatLayout = useMemo(() => {
@@ -132,7 +132,7 @@ export default function GameScene({ gameState, roomInfo, onPlayCard, lastEvent }
             <Suspense fallback={null}>
                 <TableCards3D cards={gameState.tableCards} />
                 <CaptureAnimations
-                    lastEvent={lastEvent}
+                    gameState={gameState}
                     oppPositions={oppPositions}
                     seatLayout={seatLayout}
                 />

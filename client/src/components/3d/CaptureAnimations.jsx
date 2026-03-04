@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSpring, a } from '@react-spring/three';
 import Card3D from './Card3D';
 
 function AnimatedCardGroup({ cards, targetPosition, onRest }) {
-    // We animate from center of table up, then towards target player
     const { position, scale } = useSpring({
         from: { position: [0, 0.4, 0], scale: 1 },
         to: async (next) => {
@@ -33,39 +32,45 @@ function AnimatedCardGroup({ cards, targetPosition, onRest }) {
     );
 }
 
-export default function CaptureAnimations({ lastEvent, oppPositions, seatLayout }) {
+/**
+ * Reads lastCapture directly from gameState — no dependency on separate socket events.
+ * Every capture is guaranteed to produce a lastCapture in the game state.
+ */
+export default function CaptureAnimations({ gameState, oppPositions, seatLayout }) {
     const [animations, setAnimations] = useState([]);
+    const lastTimestampRef = useRef(null);
 
     useEffect(() => {
-        if (lastEvent) {
-            console.log('🎬 CaptureAnimations received lastEvent:', {
-                seat: lastEvent.seat,
-                card: lastEvent.card?.code,
-                capturedCount: lastEvent.captured?.length,
-                eventsCount: lastEvent.events?.length
-            });
-        }
-        if (lastEvent && lastEvent.captured && lastEvent.captured.length > 0) {
-            const allCards = [lastEvent.card, ...lastEvent.captured];
-            console.log('🎬 Creating capture animation with', allCards.length, 'cards');
+        const capture = gameState?.lastCapture;
+        if (!capture || !capture.captured || capture.captured.length === 0) return;
 
-            // Default to 'me' (bottom of screen)
-            let targetPos = [0, -1, 3];
+        // Deduplicate — only animate if this is a NEW capture (different timestamp)
+        if (capture.timestamp === lastTimestampRef.current) return;
+        lastTimestampRef.current = capture.timestamp;
 
-            if (lastEvent.seat === seatLayout.left) targetPos = oppPositions.left.pos;
-            else if (lastEvent.seat === seatLayout.across) targetPos = oppPositions.across.pos;
-            else if (lastEvent.seat === seatLayout.right) targetPos = oppPositions.right.pos;
+        console.log('🎬 Capture animation triggered!', {
+            seat: capture.seat,
+            card: capture.card?.code,
+            capturedCount: capture.captured.length
+        });
 
-            const newAnim = {
-                id: Date.now() + Math.random(),
-                cards: allCards,
-                // Adjust target to be roughly chest level of opponent/player
-                targetPosition: [targetPos[0] * 0.8, targetPos[1] + 1, targetPos[2] * 0.8],
-            };
+        const allCards = [capture.card, ...capture.captured];
 
-            setAnimations(prev => [...prev, newAnim]);
-        }
-    }, [lastEvent, seatLayout, oppPositions]);
+        // Default to 'me' (bottom of screen)
+        let targetPos = [0, -1, 3];
+
+        if (capture.seat === seatLayout.left) targetPos = oppPositions.left.pos;
+        else if (capture.seat === seatLayout.across) targetPos = oppPositions.across.pos;
+        else if (capture.seat === seatLayout.right) targetPos = oppPositions.right.pos;
+
+        const newAnim = {
+            id: Date.now() + Math.random(),
+            cards: allCards,
+            targetPosition: [targetPos[0] * 0.8, targetPos[1] + 1, targetPos[2] * 0.8],
+        };
+
+        setAnimations(prev => [...prev, newAnim]);
+    }, [gameState?.lastCapture, seatLayout, oppPositions]);
 
     const removeAnimation = (id) => {
         setAnimations(prev => prev.filter(a => a.id !== id));
