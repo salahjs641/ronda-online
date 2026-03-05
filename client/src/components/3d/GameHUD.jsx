@@ -30,39 +30,44 @@ export default function GameHUD({
     const [timeLeft, setTimeLeft] = useState(null);
     const [chainTimeLeft, setChainTimeLeft] = useState(null);
 
-    // Turn timer
+    // Turn timer — use server-sent remainingMs to compute local expiry
     useEffect(() => {
-        if (!gameState?.turnExpiresAt || gameState.phase !== 'active' || gameState.state !== 'active') {
+        if (!gameState?.turnRemainingMs || gameState.phase !== 'active' || gameState.state !== 'active') {
             setTimeLeft(null);
             return;
         }
 
+        // Compute local expiry from server's remaining time
+        const localExpiry = Date.now() + gameState.turnRemainingMs;
+
         const tick = () => {
-            const remaining = Math.max(0, Math.ceil((gameState.turnExpiresAt - Date.now()) / 1000));
+            const remaining = Math.max(0, Math.ceil((localExpiry - Date.now()) / 1000));
             setTimeLeft(remaining);
         };
 
         tick();
         const interval = setInterval(tick, 200);
         return () => clearInterval(interval);
-    }, [gameState?.turnExpiresAt, gameState?.phase, gameState?.state]);
+    }, [gameState?.turnRemainingMs, gameState?.turnExpiresAt, gameState?.phase, gameState?.state]);
 
-    // Chain window timer
+    // Chain window timer — use server-sent remainingMs
     useEffect(() => {
-        if (!gameState?.chainWindowExpiresAt || !gameState?.chainPending?.active) {
+        if (!gameState?.chainWindowRemainingMs || !gameState?.chainPending?.active) {
             setChainTimeLeft(null);
             return;
         }
 
+        const localExpiry = Date.now() + gameState.chainWindowRemainingMs;
+
         const tick = () => {
-            const remaining = Math.max(0, Math.ceil((gameState.chainWindowExpiresAt - Date.now()) / 1000));
+            const remaining = Math.max(0, Math.ceil((localExpiry - Date.now()) / 1000));
             setChainTimeLeft(remaining);
         };
 
         tick();
         const interval = setInterval(tick, 200);
         return () => clearInterval(interval);
-    }, [gameState?.chainWindowExpiresAt, gameState?.chainPending]);
+    }, [gameState?.chainWindowRemainingMs, gameState?.chainWindowExpiresAt, gameState?.chainPending]);
 
     useEffect(() => {
         if (gameState?.lastAction) {

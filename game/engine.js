@@ -616,6 +616,7 @@ function getPlayerView(gs, seatNumber) {
         announceDone: gs.announceDone || {},
         state: gs.state,
         turnExpiresAt: gs.turnExpiresAt || null,
+        turnRemainingMs: gs.turnExpiresAt ? Math.max(0, gs.turnExpiresAt - Date.now()) : null,
         deckRemaining: gs.deck.length,
         teamA: { ...gs.teamA },
         teamB: { ...gs.teamB },
@@ -629,6 +630,7 @@ function getPlayerView(gs, seatNumber) {
             cards: gs.chainPending.cards
         } : null,
         chainWindowExpiresAt: gs.chainWindowExpiresAt || null,
+        chainWindowRemainingMs: gs.chainWindowExpiresAt ? Math.max(0, gs.chainWindowExpiresAt - Date.now()) : null,
         cardCount: gs.cardCount,
         opponents: gs.players
             .filter(p => p.seat !== seatNumber)
