@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from 'react';
 
-const ScorePanel = ({ label, data, isMyTeam }) => (
+const ScorePanel = ({ label, data, isMyTeam, roster }) => (
     <div className={`score-panel ${isMyTeam ? 'my-team' : ''}`}>
         <h4>{label}</h4>
+        {roster && roster.map(p => (
+            <div key={p.seat} className="roster-player">
+                <span className="roster-name">{p.username}</span>
+                <span className="roster-cards">🂠 {p.capturedCount}</span>
+            </div>
+        ))}
         <div className="score-row">
             <span className="label">Bant</span>
-            <span className="value">{data.bant}</span>
+            <span className="value">{data.bant}/8</span>
+        </div>
+        <div className="bant-bar">
+            {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={`bant-pip ${i < data.bant ? 'filled' : ''}`} />
+            ))}
         </div>
         <div className="score-row">
             <span className="label">Hbal</span>
-            <span className="value">{data.hbal}</span>
+            <span className="value">{data.hbal}/8</span>
         </div>
-        <div className="dfu-badges">
-            {data.dfu3Kbir && <span className="dfu3-badge kbir">Kbir ✓</span>}
-            {data.dfu3Sghir && <span className="dfu3-badge sghir">Sghir ✓</span>}
+        <div className="hbal-bar">
+            {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={`hbal-pip ${i < data.hbal ? 'filled' : ''}`} />
+            ))}
         </div>
     </div>
 );
@@ -132,8 +144,8 @@ export default function GameHUD({
 
             {/* Scores Side Panels */}
             <div className="score-hud">
-                <ScorePanel label="TEAM A" data={gameState.teamA} isMyTeam={myTeam === 'A'} />
-                <ScorePanel label="TEAM B" data={gameState.teamB} isMyTeam={myTeam === 'B'} />
+                <ScorePanel label="TEAM A" data={gameState.teamA} isMyTeam={myTeam === 'A'} roster={gameState.teamRoster?.A} />
+                <ScorePanel label="TEAM B" data={gameState.teamB} isMyTeam={myTeam === 'B'} roster={gameState.teamRoster?.B} />
             </div>
 
             {/* Turn Indicator */}
@@ -222,7 +234,7 @@ export default function GameHUD({
                 <div className="fullscreen-overlay game-over">
                     <div className="overlay-glass">
                         <h1 className="winner-title">{gameState.winner === myTeam ? 'VICTORY' : 'DEFEAT'}</h1>
-                        <div className="winner-sub">Team {gameState.winner} wins by Dfu3 Sghir!</div>
+                        <div className="winner-sub">Team {gameState.winner} reached 8 Hbal!</div>
                         <button className="btn-cafe secondary" onClick={() => window.location.reload()}>Back to Menu</button>
                     </div>
                 </div>

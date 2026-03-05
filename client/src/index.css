@@ -1003,6 +1003,56 @@ body {
   border: 1px solid rgba(76, 201, 100, 0.25);
 }
 
+/* Roster players */
+.roster-player {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  padding: 1px 0;
+  color: var(--text-dim);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.roster-player:last-of-type {
+  border-bottom: none;
+  margin-bottom: 4px;
+}
+
+.roster-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.roster-cards {
+  opacity: 0.6;
+}
+
+/* Bant progress bar */
+.bant-bar,
+.hbal-bar {
+  display: flex;
+  gap: 2px;
+  margin: 2px 0 4px;
+}
+
+.bant-pip,
+.hbal-pip {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.3s;
+}
+
+.bant-pip.filled {
+  background: #d47a2a;
+}
+
+.hbal-pip.filled {
+  background: var(--gold);
+  box-shadow: 0 0 4px rgba(201, 168, 76, 0.4);
+}
+
 /* ═══════════════════════════════════════════
    ROUND INFO HUD
    ═══════════════════════════════════════════ */

@@ -106,6 +106,21 @@ function getTeamData(gs, team) {
     return team === 'A' ? gs.teamA : gs.teamB;
 }
 
+// Auto-convert 8 Bant → 1 Hbal, check 8 Hbal win
+function checkBantConversion(gs) {
+    ['A', 'B'].forEach(team => {
+        const td = getTeamData(gs, team);
+        while (td.bant >= 8) {
+            td.bant -= 8;
+            td.hbal += 1;
+        }
+        if (td.hbal >= 8 && gs.state !== 'ended') {
+            gs.winner = team;
+            gs.state = 'ended';
+        }
+    });
+}
+
 function advanceTurn(gs) {
     gs.currentPlayerIndex = (gs.currentPlayerIndex + 1) % 4;
 }
@@ -425,15 +440,11 @@ function playCard(gs, seatNumber, cardCode) {
     gs.lastPlayedCard = card;
     gs.lastPlayedBySeat = player.seat;
 
-    // Check Win Condition (8 Hbal)
-    const teamObj = getTeamData(gs, player.team);
-    const convertedHbal = Math.floor(teamObj.bant / 6);
-    const totalHbal = teamObj.hbal + convertedHbal;
+    // Auto-convert 8 Bant → 1 Hbal & check 8 Hbal win
+    checkBantConversion(gs);
 
-    if (totalHbal >= 8) {
-        gs.winner = player.team;
-        gs.state = 'ended';
-        result.events.push({ type: 'WIN', description: `Team ${player.team} reached 8 Hbal and WINS!` });
+    if (gs.state === 'ended') {
+        result.events.push({ type: 'WIN', description: `Team ${gs.winner} reached 8 Hbal and WINS!` });
     }
 
     gs.lastAction = {
@@ -544,15 +555,12 @@ function endRound(gs) {
         gs.teamB.bant += (teamBCaptured - 20);
     }
 
-    // Check if anyone won at the end of the round scoring
-    const totalHbalA = gs.teamA.hbal + Math.floor(gs.teamA.bant / 6);
-    const totalHbalB = gs.teamB.hbal + Math.floor(gs.teamB.bant / 6);
+    gs.cardCount = { teamA: teamACaptured, teamB: teamBCaptured };
 
-    if (totalHbalA >= 8 || totalHbalB >= 8) {
-        gs.winner = totalHbalA >= 8 ? 'A' : 'B';
-        gs.state = 'ended';
-        return;
-    }
+    // Auto-convert 8 Bant → 1 Hbal & check 8 Hbal win
+    checkBantConversion(gs);
+
+    if (gs.state === 'ended') return;
 
     // Automatically continue game with a fresh deck!
     startNewRound(gs);
@@ -632,6 +640,10 @@ function getPlayerView(gs, seatNumber) {
         chainWindowExpiresAt: gs.chainWindowExpiresAt || null,
         chainWindowRemainingMs: gs.chainWindowExpiresAt ? Math.max(0, gs.chainWindowExpiresAt - Date.now()) : null,
         cardCount: gs.cardCount,
+        teamRoster: {
+            A: gs.players.filter(p => p.team === 'A').map(p => ({ seat: p.seat, username: p.username, capturedCount: p.capturedCards.length })),
+            B: gs.players.filter(p => p.team === 'B').map(p => ({ seat: p.seat, username: p.username, capturedCount: p.capturedCards.length }))
+        },
         opponents: gs.players
             .filter(p => p.seat !== seatNumber)
             .map(p => ({
