@@ -13,7 +13,7 @@ export default function TableCards3D({ cards }) {
 
     return (
         // Positioned on the felt surface, tilted toward player's POV
-        <group position={[0, 0.2, 0.2]}>
+        <group position={[0, 0.2, -0.3]}>
             {cards.map((card, i) => {
                 const t = total === 1 ? 0 : (i / (total - 1)) * 2 - 1;
                 const x = t * totalWidth * 0.5;

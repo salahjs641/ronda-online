@@ -12,7 +12,7 @@ export default function Hand3D({ cards, isMyTurn, onPlayCard }) {
     // Camera is at (0, 2.6, 3.5)
     // COORDINATES are relative to Camera (nested in PerspectiveCamera)
     return (
-        <group position={[0, -0.9, -2.6]} rotation={[0.15, 0, 0]}>
+        <group position={[0, -1.15, -2.6]} rotation={[0.15, 0, 0]}>
             {cards.map((card, i) => {
                 const t = total === 1 ? 0 : (i / (total - 1)) * 2 - 1;
                 const x = t * totalWidth * 0.45;

@@ -58,13 +58,13 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
             {/* Sky hemisphere */}
             <hemisphereLight intensity={0.6} color="#87CEEB" groundColor="#8B6914" />
 
-            {/* Warm ambient — sunny courtyard feel */}
-            <ambientLight intensity={0.8} color="#ffe4b5" />
+            {/* Warm ambient — soft courtyard feel */}
+            <ambientLight intensity={0.5} color="#ffe4b5" />
 
             {/* Main sun — golden hour directional */}
             <directionalLight
                 position={[5, 8, 3]}
-                intensity={3}
+                intensity={1.5}
                 color="#ffd080"
                 castShadow
                 shadow-bias={-0.0001}
@@ -76,16 +76,16 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
                 position={[0, 5, 0]}
                 angle={0.7}
                 penumbra={0.7}
-                intensity={15}
+                intensity={6}
                 color="#ffcc66"
                 castShadow
             />
 
             {/* Fill lights */}
-            <pointLight position={[0, 0.5, 0]} intensity={4} color="#ffa94d" distance={5} decay={2} />
-            <pointLight position={[0, 2.5, 3.5]} intensity={3} color="#fff5e6" distance={6} decay={2} />
-            <pointLight position={[-3, 2, 0]} intensity={2} color="#ffd699" distance={5} decay={2} />
-            <pointLight position={[3, 2, 0]} intensity={2} color="#ffd699" distance={5} decay={2} />
+            <pointLight position={[0, 0.5, 0]} intensity={1.5} color="#ffa94d" distance={5} decay={2} />
+            <pointLight position={[0, 2.5, 3.5]} intensity={2} color="#fff5e6" distance={6} decay={2} />
+            <pointLight position={[-3, 2, 0]} intensity={1} color="#ffd699" distance={5} decay={2} />
+            <pointLight position={[3, 2, 0]} intensity={1} color="#ffd699" distance={5} decay={2} />
 
             {/* Warm sky-like background */}
             <color attach="background" args={['#1a120a']} />
