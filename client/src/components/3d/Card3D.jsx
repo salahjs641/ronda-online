@@ -36,22 +36,20 @@ function CardMesh({ card, position, rotation, onClick, isPlayable, scale, hovere
             <RoundedBox args={[w, h, thickness]} radius={0.02 * scale} smoothness={4} castShadow receiveShadow>
                 {/* Physical material for realistic thick card stock */}
                 <meshPhysicalMaterial
-                    color="#e8e1cf"
-                    roughness={0.7}
-                    clearcoat={0.1}
-                    clearcoatRoughness={0.4}
+                    color="#f5f0e8"
+                    roughness={0.8}
+                    clearcoat={0.05}
+                    clearcoatRoughness={0.5}
                 />
             </RoundedBox>
 
             {/* ══ FRONT FACE: Using physical material to catch dynamic light instead of basic ══ */}
             <mesh position={[0, 0, thickness / 2 + 0.001]} receiveShadow>
                 <planeGeometry args={[w - 0.02, h - 0.02]} />
-                <meshPhysicalMaterial
+                <meshStandardMaterial
                     map={frontTex}
-                    roughness={0.3}
+                    roughness={0.6}
                     metalness={0.0}
-                    clearcoat={0.4}
-                    clearcoatRoughness={0.15}
                 />
             </mesh>
 

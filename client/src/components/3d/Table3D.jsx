@@ -82,12 +82,12 @@ export default function Table3D() {
             <mesh ref={mosaicRef} position={[0, 0.1, 0]} receiveShadow>
                 <cylinderGeometry args={[2.75, 2.75, 0.03, seg]} />
                 <meshPhysicalMaterial
-                    color="#1a2a3a"
+                    color="#2a1a0e"
                     roughness={0.85}
                     metalness={0.03}
                     clearcoat={0.3}
                     clearcoatRoughness={0.4}
-                    emissive="#0a1520"
+                    emissive="#150c05"
                     emissiveIntensity={0.03}
                 />
             </mesh>
