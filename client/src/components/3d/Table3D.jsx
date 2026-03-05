@@ -66,15 +66,7 @@ export default function Table3D() {
                 );
             })}
 
-            {/* Iron ring connecting legs under the table top */}
-            <mesh position={[0, -0.02, 0]}>
-                <torusGeometry args={[2.1, 0.025, 6, seg]} />
-                <meshPhysicalMaterial
-                    color="#1a1a1a"
-                    metalness={0.85}
-                    roughness={0.4}
-                />
-            </mesh>
+
 
             {/* ══════════ TABLE TOP BASE — Concrete/plaster slab ══════════ */}
             <mesh position={[0, 0.04, 0]} receiveShadow castShadow>
