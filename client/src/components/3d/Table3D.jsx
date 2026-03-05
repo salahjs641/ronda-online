@@ -100,10 +100,16 @@ export default function Table3D() {
                 />
             </mesh>
 
-            {/* Zellige tile rings — concentric colored bands */}
-            {[2.6, 2.2, 1.7, 1.1, 0.5].map((radius, i) => (
-                <mesh key={`ring-${i}`} position={[0, 0.115, 0]}>
-                    <torusGeometry args={[radius, 0.04, 4, seg]} />
+            {/* Zellige tile rings — flat concentric colored bands on the surface */}
+            {[
+                { inner: 2.45, outer: 2.6 },
+                { inner: 2.05, outer: 2.2 },
+                { inner: 1.55, outer: 1.7 },
+                { inner: 0.95, outer: 1.1 },
+                { inner: 0.35, outer: 0.5 },
+            ].map((ring, i) => (
+                <mesh key={`ring-${i}`} position={[0, 0.116, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <ringGeometry args={[ring.inner, ring.outer, seg]} />
                     <meshPhysicalMaterial
                         color={tileColors[i % tileColors.length]}
                         roughness={0.5}
@@ -114,17 +120,17 @@ export default function Table3D() {
                 </mesh>
             ))}
 
-            {/* Star pattern tiles — 8-pointed star motif */}
+            {/* Star pattern tiles — 8 radial lines flat on surface */}
             {Array.from({ length: 8 }).map((_, i) => {
                 const angle = (i / 8) * Math.PI * 2;
                 return (
                     <group key={`star-${i}`}>
                         {/* Radial tile line */}
                         <mesh
-                            position={[Math.cos(angle) * 1.4, 0.115, Math.sin(angle) * 1.4]}
+                            position={[Math.cos(angle) * 1.4, 0.117, Math.sin(angle) * 1.4]}
                             rotation={[-Math.PI / 2, 0, angle]}
                         >
-                            <planeGeometry args={[0.06, 2.4]} />
+                            <planeGeometry args={[0.05, 2.2]} />
                             <meshPhysicalMaterial
                                 color={tileColors[(i + 2) % tileColors.length]}
                                 roughness={0.5}
@@ -137,7 +143,7 @@ export default function Table3D() {
                             position={[Math.cos(angle) * 1.9, 0.118, Math.sin(angle) * 1.9]}
                             rotation={[-Math.PI / 2, 0, angle + Math.PI / 4]}
                         >
-                            <planeGeometry args={[0.15, 0.15]} />
+                            <planeGeometry args={[0.12, 0.12]} />
                             <meshPhysicalMaterial
                                 color={tileColors[(i + 4) % tileColors.length]}
                                 roughness={0.4}
@@ -149,9 +155,9 @@ export default function Table3D() {
                 );
             })}
 
-            {/* ══════════ CEDAR WOOD RIM — Weathered aged wood edge ══════════ */}
-            <mesh position={[0, 0.1, 0]} receiveShadow castShadow>
-                <torusGeometry args={[2.9, 0.07, 8, seg]} />
+            {/* ══════════ CEDAR WOOD RIM — Flat ring edge ══════════ */}
+            <mesh position={[0, 0.116, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow castShadow>
+                <ringGeometry args={[2.75, 2.95, seg]} />
                 <meshPhysicalMaterial
                     color="#6a4a2a"
                     roughness={0.75}
