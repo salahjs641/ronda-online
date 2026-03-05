@@ -2,7 +2,7 @@ import React from 'react';
 import Card3D from './Card3D';
 
 export default function Hand3D({ cards, isMyTurn, onPlayCard }) {
-    console.log('Rendering Hand3D, cards count:', cards?.length);
+
     if (!cards || cards.length === 0) return null;
 
     const total = cards.length;
