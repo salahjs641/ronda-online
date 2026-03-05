@@ -8,7 +8,6 @@ const engine = require('../game/engine');
 const rooms = new Map();
 const games = new Map();
 const playerSockets = new Map();
-const announceTimeouts = new Map();
 const turnTimeouts = new Map();
 const chainTimeouts = new Map();
 
@@ -92,11 +91,7 @@ function startTurnTimer(io, roomCode) {
 
                     // Start next timer
                     if (currentGs.state === 'active') {
-                        if (currentGs.phase === 'announcing') {
-                            startAnnounceTimer(io, roomCode);
-                        } else {
-                            startTurnTimer(io, roomCode);
-                        }
+                        startTurnTimer(io, roomCode);
                     } else {
                         clearTurnTimer(roomCode);
                     }
@@ -195,7 +190,9 @@ function setupSocketHandlers(io) {
             callback({ success: true });
             io.to(info.roomCode).emit('game-started');
 
-            startAnnounceTimer(io, info.roomCode);
+            // Auto-resolve Ronda/Tringa then start turn timer
+            autoResolveAndBroadcast(io, info.roomCode);
+            startTurnTimer(io, info.roomCode);
             console.log(`🎮 Game started in ${info.roomCode}`);
         });
 
@@ -238,11 +235,7 @@ function setupSocketHandlers(io) {
             } else if (gs.state === 'active') {
                 // Normal play — clear any chain timer, start turn timer
                 clearChainTimer(info.roomCode);
-                if (gs.phase === 'announcing') {
-                    startAnnounceTimer(io, info.roomCode);
-                } else if (gs.phase === 'active') {
-                    startTurnTimer(io, info.roomCode);
-                }
+                startTurnTimer(io, info.roomCode);
             } else {
                 clearTurnTimer(info.roomCode);
                 clearChainTimer(info.roomCode);
@@ -270,38 +263,7 @@ function setupSocketHandlers(io) {
             callback({ success: true, type: result.type });
         });
 
-        // ─── ANNOUNCE RONDA / TRINGA ─────────────────
-        socket.on('announce-ronda', ({ type }, callback) => {
-            const info = playerSockets.get(socket.id);
-            if (!info) return callback({ success: false, error: 'Not in a room' });
-            const gs = games.get(info.roomCode);
-            if (!gs) return callback({ success: false, error: 'No active game' });
 
-            const result = engine.announce(gs, info.seat, type);
-            if (!result.success) return callback(result);
-
-            io.to(info.roomCode).emit('chat-message', {
-                username: 'SYSTEM',
-                text: `${result.username} announced ${type}!`,
-                team: 'SYSTEM'
-            });
-
-            checkAnnouncementPhase(io, info.roomCode);
-            callback({ success: true });
-        });
-
-        socket.on('skip-announcing', (_, callback) => {
-            const info = playerSockets.get(socket.id);
-            if (!info) return callback({ success: false, error: 'Not in a room' });
-            const gs = games.get(info.roomCode);
-            if (!gs) return callback({ success: false, error: 'No active game' });
-
-            const result = engine.skipAnnounce(gs, info.seat);
-            if (!result.success) return callback(result);
-
-            checkAnnouncementPhase(io, info.roomCode);
-            callback({ success: true });
-        });
 
         // ─── NEXT ROUND ─────────────────────────────
         socket.on('next-round', (_, callback) => {
@@ -313,7 +275,8 @@ function setupSocketHandlers(io) {
             engine.startNewRound(gs);
             broadcastGameState(io, info.roomCode);
             persistState(info.roomCode);
-            startAnnounceTimer(io, info.roomCode);
+            autoResolveAndBroadcast(io, info.roomCode);
+            startTurnTimer(io, info.roomCode);
             io.to(info.roomCode).emit('round-started', { round: gs.roundNumber });
             callback({ success: true });
         });
@@ -354,44 +317,19 @@ function setupSocketHandlers(io) {
     });
 }
 
-function startAnnounceTimer(io, roomCode) {
-    // Clear existing timer if any
-    if (announceTimeouts.has(roomCode)) {
-        clearTimeout(announceTimeouts.get(roomCode));
-    }
-
-    // Set a 15-second timeout for the announcement phase
-    const timeout = setTimeout(() => {
-        const gs = games.get(roomCode);
-        if (gs && gs.phase === 'announcing') {
-            engine.forceSkipAnnouncing(gs);
-            startTurnTimer(io, roomCode);
-            broadcastGameState(io, roomCode);
-            io.to(roomCode).emit('chat-message', {
-                username: 'SYSTEM',
-                text: `Announcement phase timed out.`,
-                team: 'SYSTEM'
-            });
-        }
-        announceTimeouts.delete(roomCode);
-    }, 15000);
-
-    announceTimeouts.set(roomCode, timeout);
-}
-
-function checkAnnouncementPhase(io, roomCode) {
+function autoResolveAndBroadcast(io, roomCode) {
     const gs = games.get(roomCode);
     if (!gs) return;
-
-    // The engine's checkAnnouncingComplete already advances the phase if everyone is done.
-    // So we just need to broadcast the state.
-    broadcastGameState(io, roomCode);
-
-    if (gs.phase === 'active' && announceTimeouts.has(roomCode)) {
-        clearTimeout(announceTimeouts.get(roomCode));
-        announceTimeouts.delete(roomCode);
-        startTurnTimer(io, roomCode);
+    const events = engine.autoResolveAnnouncements(gs);
+    for (const evt of events) {
+        io.to(roomCode).emit('chat-message', {
+            username: 'SYSTEM',
+            text: evt.description,
+            team: 'SYSTEM'
+        });
     }
+    broadcastGameState(io, roomCode);
+    persistState(roomCode);
 }
 
 function broadcastGameState(io, roomCode) {

@@ -158,32 +158,7 @@ export default function GameHUD({
                 </div>
             )}
 
-            {/* Announcement Phase Overlay */}
-            {/* Announcement Phase UI - Non-blocking prompt */}
-            {gameState.phase === 'announcing' && !myAnnounceDone && gameState.state === 'active' && (
-                <div className="announcement-prompt-pos">
-                    <div className="announce-card-view">
-                        <span className="prompt-text">Announce?</span>
-                        <div className="btn-group">
-                            <button className="btn-mini ronda" onClick={() => onAnnounce('ronda')}>Ronda</button>
-                            <button className="btn-mini tringa" onClick={() => onAnnounce('tringa')}>Tringa</button>
-                            <button className="btn-mini skip" onClick={onSkipAnnounce}>No</button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            {/* Announcement Status (Who is left) */}
-            {gameState.phase === 'announcing' && gameState.state === 'active' && (
-                <div className="announce-status">
-                    <span className="label">Announcing:</span>
-                    {[1, 2, 3, 4].map(s => (
-                        <div key={s} className={`status-dot ${gameState.announceDone?.[s] ? 'done' : 'pending'} ${s === mySeat ? 'me' : ''}`}>
-                            {s}
-                        </div>
-                    ))}
-                </div>
-            )}
 
             {/* Dfu3 Actions */}
             {(canClaimKbir || canClaimSghir) && gameState.state === 'active' && (

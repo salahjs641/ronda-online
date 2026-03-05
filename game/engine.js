@@ -55,7 +55,7 @@ function initMatch(players) {
         lastCapturer: null,
         lastPlayedCard: null,
         lastPlayedBySeat: null,
-        phase: 'announcing',
+        phase: 'active',
         announcements: {},
         announceDone: {},  // Track who has decided (announced or skipped)
         lastAction: null,  // For client display
@@ -146,104 +146,68 @@ function findAscendingSequence(matchedRank, tableCards) {
 }
 
 // ═══════════════════════════════════════════
-//  ANNOUNCE / SKIP
+//  AUTO RONDA / TRINGA DETECTION
 // ═══════════════════════════════════════════
 
-function announce(gs, seatNumber, type) {
-    if (gs.phase !== 'announcing') return { success: false, error: 'Not announcing phase' };
-    if (gs.announceDone[seatNumber]) return { success: false, error: 'Already decided' };
+function autoResolveAnnouncements(gs) {
+    const events = [];
+    const rondas = []; // { seat, team, username, rank, rankIdx }
+    const tringas = [];
 
-    const player = getPlayerBySeat(gs, seatNumber);
-    if (!player) return { success: false, error: 'Player not found' };
-
-    const counts = {};
-    player.hand.forEach(c => counts[c.value] = (counts[c.value] || 0) + 1);
-    const max = Math.max(...Object.values(counts));
-
-    if (type === 'ronda' && max < 2) return { success: false, error: 'No pair found' };
-    if (type === 'tringa' && max < 3) return { success: false, error: 'No trio found' };
-
-    gs.announcements[seatNumber] = type;
-    gs.announceDone[seatNumber] = true;
-
-    // Check if all players have decided
-    checkAnnouncingComplete(gs);
-
-    return { success: true, type, username: player.username, seat: seatNumber };
-}
-
-function skipAnnounce(gs, seatNumber) {
-    if (gs.phase !== 'announcing') return { success: false, error: 'Not announcing phase' };
-    if (gs.announceDone[seatNumber]) return { success: false, error: 'Already decided' };
-
-    gs.announceDone[seatNumber] = true;
-
-    // Check if all players have decided
-    checkAnnouncingComplete(gs);
-
-    const player = getPlayerBySeat(gs, seatNumber);
-    return { success: true, username: player?.username, seat: seatNumber };
-}
-
-function checkAnnouncingComplete(gs) {
-    const allDone = gs.players.every(p => gs.announceDone[p.seat]);
-    if (allDone) {
-        // Resolve announcements
-        verifyAnnouncements(gs);
-        gs.phase = 'active';
-    }
-}
-
-function forceSkipAnnouncing(gs) {
-    // Force end announcing (timeout)
-    verifyAnnouncements(gs);
-    gs.phase = 'active';
-    gs.announceDone = {};
-}
-
-function verifyAnnouncements(gs) {
-    const seats = Object.keys(gs.announcements).map(Number);
-    if (seats.length === 0) return;
-
-    let bestSeat = -1;
-    let bestType = '';
-    let bestRankIdx = -1;
-
-    for (const seat of seats) {
-        const type = gs.announcements[seat];
-        const player = getPlayerBySeat(gs, seat);
+    for (const player of gs.players) {
         const counts = {};
         player.hand.forEach(c => counts[c.value] = (counts[c.value] || 0) + 1);
 
-        let targetCount = (type === 'tringa' ? 3 : 2);
-        let rank = -1;
-        for (const [r, c] of Object.entries(counts)) {
-            if (c >= targetCount) rank = parseInt(r);
-        }
-        const rankIdx = getRankIndex(rank);
-
-        if (bestType === '') {
-            bestSeat = seat; bestType = type; bestRankIdx = rankIdx;
-        } else if (type === 'tringa' && bestType === 'ronda') {
-            bestSeat = seat; bestType = type; bestRankIdx = rankIdx;
-        } else if (type === bestType && rankIdx > bestRankIdx) {
-            bestSeat = seat; bestType = type; bestRankIdx = rankIdx;
+        for (const [val, count] of Object.entries(counts)) {
+            const rank = parseInt(val);
+            const rankIdx = getRankIndex(rank);
+            if (count >= 3) {
+                tringas.push({ seat: player.seat, team: player.team, username: player.username, rank, rankIdx });
+            } else if (count >= 2) {
+                rondas.push({ seat: player.seat, team: player.team, username: player.username, rank, rankIdx });
+            }
         }
     }
 
-    if (bestSeat !== -1) {
-        let totalPoints = 0;
-        for (const s of seats) {
-            const t = gs.announcements[s];
-            totalPoints += (t === 'tringa' ? 5 : 1);
-        }
-        const winner = getPlayerBySeat(gs, bestSeat);
+    // Resolve Rondas — each worth 1 Bant, highest card wins ALL
+    if (rondas.length > 0) {
+        const totalBant = rondas.length;
+        rondas.sort((a, b) => b.rankIdx - a.rankIdx);
+        const winner = rondas[0];
         const teamData = getTeamData(gs, winner.team);
-        teamData.bant += totalPoints;
+        teamData.bant += totalBant;
+
+        for (const r of rondas) {
+            events.push({ type: 'RONDA', description: `${r.username} has Ronda of ${r.rank}` });
+        }
+        events.push({ type: 'RONDA_WIN', description: `${winner.username}'s team wins ${totalBant} Bant!` });
     }
 
+    // Resolve Tringas — each worth 1 Hbal, highest card wins ALL
+    if (tringas.length > 0) {
+        const totalHbal = tringas.length;
+        tringas.sort((a, b) => b.rankIdx - a.rankIdx);
+        const winner = tringas[0];
+        const teamData = getTeamData(gs, winner.team);
+        teamData.hbal += totalHbal;
+
+        for (const t of tringas) {
+            events.push({ type: 'TRINGA', description: `${t.username} has Tringa of ${t.rank}` });
+        }
+        events.push({ type: 'TRINGA_WIN', description: `${winner.username}'s team wins ${totalHbal} Hbal!` });
+    }
+
+    // Check conversion after awarding
+    if (rondas.length > 0 || tringas.length > 0) {
+        checkBantConversion(gs);
+    }
+
+    // Go straight to active phase — no waiting
+    gs.phase = 'active';
     gs.announcements = {};
     gs.announceDone = {};
+
+    return events;
 }
 
 // ═══════════════════════════════════════════
@@ -571,7 +535,7 @@ function dealNewHands(gs) {
         const n = Math.min(CARDS_PER_DEAL, gs.deck.length);
         if (n > 0) player.hand = deal(gs.deck, n);
     }
-    gs.phase = 'announcing';
+    gs.phase = 'active';
     gs.announcements = {};
     gs.announceDone = {};
 }
@@ -594,7 +558,7 @@ function startNewRound(gs) {
     gs.lastAction = null;
     gs.cardCount = null;
     gs.dealNumber = 1;
-    gs.phase = 'announcing';
+    gs.phase = 'active';
     gs.announcements = {};
     gs.announceDone = {};
     gs.roundNumber++;
@@ -653,4 +617,4 @@ function getPlayerView(gs, seatNumber) {
     };
 }
 
-module.exports = { initMatch, playCard, claimDfu3, startNewRound, getPlayerView, announce, skipAnnounce, forceSkipAnnouncing, resolveChain };
+module.exports = { initMatch, playCard, claimDfu3, startNewRound, getPlayerView, autoResolveAnnouncements, resolveChain };
