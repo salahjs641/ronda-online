@@ -1,6 +1,6 @@
 import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { PerspectiveCamera } from '@react-three/drei';
+import { PerspectiveCamera, Environment } from '@react-three/drei';
 import Table3D from './Table3D';
 import Hand3D from './Hand3D';
 import TableCards3D from './TableCards3D';
@@ -89,6 +89,9 @@ export default function GameScene({ gameState, roomInfo, onPlayCard }) {
 
             {/* Warm sky-like background */}
             <color attach="background" args={['#1a120a']} />
+
+            {/* ═══ HDRI ENVIRONMENT — Realistic reflections & ambient light ═══ */}
+            <Environment preset="apartment" background={false} environmentIntensity={0.4} />
 
             {/* ═══ RIAD COURTYARD ENVIRONMENT ═══ */}
 
