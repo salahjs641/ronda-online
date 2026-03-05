@@ -60,50 +60,8 @@ function startTurnTimer(io, roomCode) {
     const gs = games.get(roomCode);
     if (!gs || gs.state !== 'active' || gs.phase !== 'active') return;
 
-    gs.turnExpiresAt = Date.now() + 15000;
-
-    const timeout = setTimeout(() => {
-        const currentGs = games.get(roomCode);
-        if (currentGs && currentGs.state === 'active' && currentGs.phase === 'active') {
-            const currentSeat = currentGs.players[currentGs.currentPlayerIndex].seat;
-            const player = currentGs.players.find(p => p.seat === currentSeat);
-            if (player && player.hand.length > 0) {
-                const randomCardCode = player.hand[Math.floor(Math.random() * player.hand.length)].code;
-                const result = engine.playCard(currentGs, player.seat, randomCardCode);
-
-                if (result.success) {
-                    if (result.captured.length > 0 || (result.events && result.events.length > 0)) {
-                        io.to(roomCode).emit('game-events', {
-                            player: result.playedBy.username,
-                            card: result.card,
-                            events: result.events,
-                            captured: result.captured,
-                            bantEarned: result.bantEarned,
-                            hbalEarned: result.hbalEarned,
-                            seat: result.playedBy.seat
-                        });
-                    }
-                    io.to(roomCode).emit('chat-message', {
-                        username: 'SYSTEM',
-                        text: `${player.username} played a card automatically (timeout).`,
-                        team: 'SYSTEM'
-                    });
-
-                    // Start next timer
-                    if (currentGs.state === 'active') {
-                        startTurnTimer(io, roomCode);
-                    } else {
-                        clearTurnTimer(roomCode);
-                    }
-
-                    broadcastGameState(io, roomCode);
-                    persistState(roomCode);
-                }
-            }
-        }
-        turnTimeouts.delete(roomCode);
-    }, 15000);
-    turnTimeouts.set(roomCode, timeout);
+    // Timer logic removed: Hands are now played manually, except for chains.
+    gs.turnExpiresAt = null;
 }
 
 let GameStateModel = null;
