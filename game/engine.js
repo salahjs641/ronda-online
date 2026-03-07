@@ -178,7 +178,7 @@ function autoResolveAnnouncements(gs) {
         teamData.bant += totalBant;
 
         for (const r of rondas) {
-            events.push({ type: 'RONDA', description: `${r.username} has Ronda of ${r.rank}` });
+            events.push({ type: 'RONDA', description: `${r.username} got Ronda!` });
         }
         events.push({ type: 'RONDA_WIN', description: `${winner.username}'s team wins ${totalBant} Bant!` });
     }
@@ -192,7 +192,7 @@ function autoResolveAnnouncements(gs) {
         teamData.hbal += totalHbal;
 
         for (const t of tringas) {
-            events.push({ type: 'TRINGA', description: `${t.username} has Tringa of ${t.rank}` });
+            events.push({ type: 'TRINGA', description: `${t.username} got Tringa!` });
         }
         events.push({ type: 'TRINGA_WIN', description: `${winner.username}'s team wins ${totalHbal} Hbal!` });
     }
